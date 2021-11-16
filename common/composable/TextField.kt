@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.ui.elements
+package com.vaticle.typedb.studio.common.composable
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -47,15 +47,15 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vaticle.typedb.studio.appearance.StudioTheme
-import com.vaticle.typedb.studio.ui.elements.StudioTextFieldVariant.OUTLINED
-import com.vaticle.typedb.studio.ui.elements.StudioTextFieldVariant.UNDECORATED
+import com.vaticle.typedb.studio.common.composable.StudioTextFieldVariant.OUTLINED
+import com.vaticle.typedb.studio.common.composable.StudioTextFieldVariant.UNDECORATED
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun StudioTextField(
+fun TextField(
     value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier,
     variant: StudioTextFieldVariant = OUTLINED, singleLine: Boolean = true, maxLines: Int = 1, readOnly: Boolean = false,
-    leadingIcon: (@Composable () -> Unit)? = null, trailingIcon: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true, leadingIcon: (@Composable () -> Unit)? = null, trailingIcon: (@Composable () -> Unit)? = null,
     placeholderText: String = "", visualTransformation: VisualTransformation = VisualTransformation.None,
     pointerHoverIcon: PointerIcon = PointerIcon.Text /*PointerIconDefaults.Text*/, // TODO: #516
     textStyle: TextStyle
@@ -84,7 +84,7 @@ fun StudioTextField(
                 }
             },
         value = value, onValueChange = onValueChange, readOnly = readOnly, singleLine = singleLine, maxLines = maxLines,
-        cursorBrush = SolidColor(MaterialTheme.colors.primary),
+        enabled = enabled, cursorBrush = SolidColor(MaterialTheme.colors.primary),
         textStyle = textStyle.copy(color = MaterialTheme.colors.onSurface), visualTransformation = visualTransformation,
         decorationBox = { innerTextField ->
             Row(modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {

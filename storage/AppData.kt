@@ -25,10 +25,10 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy
 import ch.qos.logback.core.util.FileSize
-import com.vaticle.typedb.studio.common.OS.LINUX
-import com.vaticle.typedb.studio.common.OS.MAC
-import com.vaticle.typedb.studio.common.OS.WINDOWS
-import com.vaticle.typedb.studio.common.currentOS
+import com.vaticle.typedb.studio.common.system.OS.LINUX
+import com.vaticle.typedb.studio.common.system.OS.MAC
+import com.vaticle.typedb.studio.common.system.OS.WINDOWS
+import com.vaticle.typedb.studio.common.system.currentOS
 import java.lang.System.getProperty
 import java.lang.System.getenv
 import java.nio.file.Files

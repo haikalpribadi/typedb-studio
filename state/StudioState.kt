@@ -16,22 +16,9 @@
  *
  */
 
-package com.vaticle.typedb.studio.common
+package com.vaticle.typedb.studio.state
 
-import com.vaticle.typedb.studio.common.OS.*
-import java.util.Locale
+object StudioState {
 
-enum class OS {
-    WINDOWS,
-    MAC,
-    LINUX
-}
-
-fun currentOS(): OS {
-    val osName = System.getProperty("os.name").lowercase(Locale.ENGLISH)
-    return when {
-        "mac" in osName || "darwin" in osName -> MAC
-        "win" in osName -> WINDOWS
-        else -> LINUX
-    }
+    val connection: ConnectionManager = ConnectionManager()
 }

@@ -21,14 +21,16 @@ load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
 package(default_visibility = ["//visibility:public"])
 
 kt_jvm_library(
-    name = "common",
-    srcs = glob(["**/*.kt"]),
+    name = "composable",
+    srcs = glob(["*.kt"]),
     kotlin_compiler_plugin = "@org_jetbrains_compose_compiler//file",
     deps = [
+        "//appearance",
+
         # Maven
         "@maven//:org_jetbrains_compose_desktop_desktop_jvm",
     ],
-    tags = ["maven_coordinates=com.vaticle.typedb:studio-common:{pom_version}"],
+    tags = ["maven_coordinates=com.vaticle.typedb:studio-ui-elements:{pom_version}"],
 )
 
 checkstyle_test(

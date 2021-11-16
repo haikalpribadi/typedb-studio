@@ -30,10 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vaticle.typedb.studio.appearance.StudioTheme
-import com.vaticle.typedb.studio.ui.elements.Icon
-import com.vaticle.typedb.studio.ui.elements.IconSize.*
-import com.vaticle.typedb.studio.ui.elements.StudioDatabaseIcon
-import com.vaticle.typedb.studio.ui.elements.StudioIcon
+import com.vaticle.typedb.studio.common.composable.Icon
+import com.vaticle.typedb.studio.common.composable.IconSize.*
+import com.vaticle.typedb.studio.common.composable.StudioDatabaseIcon
+import com.vaticle.typedb.studio.common.composable.StudioIcon
 
 @Composable
 fun Toolbar(

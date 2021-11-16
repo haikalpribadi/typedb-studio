@@ -28,7 +28,7 @@ kt_jvm_library(
         "//appearance",
         "//diagnostics",
         "//routing",
-        "//ui/elements",
+        "//common/composable",
         "//visualiser",
 
         # External dependencies from @vaticle

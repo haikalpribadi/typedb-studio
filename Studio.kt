@@ -18,66 +18,49 @@
 
 package com.vaticle.typedb.studio
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Scaffold
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement.Maximized
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.vaticle.typedb.studio.appearance.StudioTheme
-import com.vaticle.typedb.studio.appearance.defaultVisualiserTheme
-import com.vaticle.typedb.studio.connection.ConnectionScreen
-import com.vaticle.typedb.studio.routing.ConnectionRoute
-import com.vaticle.typedb.studio.routing.Router
-import com.vaticle.typedb.studio.routing.WorkspaceRoute
+import com.vaticle.typedb.studio.common.composable.Separator
+import com.vaticle.typedb.studio.connection.ConnectionDialog
+import com.vaticle.typedb.studio.navigator.Navigator
+import com.vaticle.typedb.studio.page.Page
+import com.vaticle.typedb.studio.state.StudioState
+import com.vaticle.typedb.studio.statusbar.StatusBar
 import com.vaticle.typedb.studio.storage.AppData
-import com.vaticle.typedb.studio.ui.elements.StudioSnackbarHost
-import com.vaticle.typedb.studio.workspace.WorkspaceScreen
+import com.vaticle.typedb.studio.toolbar.Toolbar
 import mu.KotlinLogging.logger
 
 @Composable
 fun Studio(onCloseRequest: () -> Unit) {
-    val snackbarHostState = rememberScaffoldState().snackbarHostState
-    val pixelDensity = LocalDensity.current.density
-    var titleBarHeight by remember { mutableStateOf(0F) }
 
     // TODO: we want no title bar, by passing undecorated = true, but it seems to cause intermittent crashes on startup
     //       (see #40). Test if they occur when running the distribution, or only with bazel run :studio-bin-*
     Window(title = "TypeDB Studio", onCloseRequest = onCloseRequest, state = rememberWindowState(Maximized)) {
         StudioTheme {
-            Scaffold(modifier = Modifier.fillMaxSize()
-                .border(BorderStroke(1.dp, SolidColor(StudioTheme.colors.uiElementBorder)))
-                .onGloballyPositioned { coordinates ->
-                    // used to translate from screen coordinates to window coordinates in the visualiser
-                    titleBarHeight = window.height - coordinates.size.height / pixelDensity
-                }) {
-                when (val routeData = Router.currentRoute) {
-                    is ConnectionRoute -> ConnectionScreen.Main(routeData, snackbarHostState)
-                    is WorkspaceRoute -> WorkspaceScreen(
-                        routeData, defaultVisualiserTheme(), window, titleBarHeight, snackbarHostState
-                    )
+            Column(modifier = Modifier.fillMaxWidth().background(StudioTheme.colors.background)) {
+                Toolbar.Area()
+                Separator.Horizontal()
+                Row(Modifier.fillMaxWidth().weight(1f)) {
+                    Navigator.Area()
+                    Separator.Vertical()
+                    Page.Area()
                 }
-                Box(modifier = Modifier.fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {
-                    StudioSnackbarHost(snackbarHostState)
-                }
+                Separator.Horizontal()
+                StatusBar.Area()
             }
         }
+    }
+    if (StudioState.connection.openDialog) {
+        ConnectionDialog.Window()
     }
 }
 

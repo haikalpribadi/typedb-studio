@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.ui.elements
+package com.vaticle.typedb.studio.common.composable
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding

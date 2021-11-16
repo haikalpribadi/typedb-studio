@@ -33,7 +33,7 @@ data class VisualiserTheme(
     val inferred: Color, val explanation: Color, val error: Color, val vertexLabel: Color,
 )
 
-fun defaultVisualiserTheme() = VisualiserTheme(
+val DEFAULT_VISUALISER_THEME = VisualiserTheme(
     background = VaticlePalette.Purple0,
     vertex = mapOf(
         THING_TYPE to VaticlePalette.Pink2,

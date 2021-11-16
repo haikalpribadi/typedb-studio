@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.ui.elements
+package com.vaticle.typedb.studio.common.composable
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -104,7 +104,8 @@ fun StudioTab(
             Text(text, style = textStyle)
             if (showCloseButton) {
                 Spacer(Modifier.width(4.dp))
-                StudioIcon(Icon.Cross, color = StudioTheme.colors.icon.copy(alpha = 0.5f),
+                StudioIcon(
+                    Icon.Cross, color = StudioTheme.colors.icon.copy(alpha = 0.5f),
                     modifier = Modifier.clickable { onClose() })
                 Spacer(Modifier.width(4.dp))
             } else {
