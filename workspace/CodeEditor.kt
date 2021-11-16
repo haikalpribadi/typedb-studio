@@ -29,8 +29,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.SwingPanel
-import com.vaticle.typedb.studio.appearance.StudioTheme
-import com.vaticle.typedb.studio.appearance.toSwingColor
+import com.vaticle.typedb.studio.common.theme.StudioTheme
+import com.vaticle.typedb.studio.common.theme.toSwingColor
 import com.vaticle.typedb.studio.diagnostics.rememberErrorReporter
 import mu.KotlinLogging.logger
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea

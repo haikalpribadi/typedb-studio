@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.ui.elements
+package com.vaticle.typedb.studio.common.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,7 +41,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vaticle.typedb.studio.appearance.StudioTheme
+import com.vaticle.typedb.studio.common.theme.StudioTheme
 import java.awt.event.KeyEvent.KEY_RELEASED
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -50,6 +50,8 @@ fun StudioButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifie
     val focusManager = LocalFocusManager.current
     val backgroundColor = if (enabled) StudioTheme.colors.primary else StudioTheme.colors.uiElementBackground
     val textColor = if (enabled) StudioTheme.colors.onPrimary else StudioTheme.colors.text.copy(alpha = .25f)
+
+    // TODO: pointerHoverIcon = PointerIcon.Hand
 
     Row(
         verticalAlignment = Alignment.CenterVertically, modifier = modifier

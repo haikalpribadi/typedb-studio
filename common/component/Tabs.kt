@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.ui.elements
+package com.vaticle.typedb.studio.common.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,7 +39,7 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import com.vaticle.typedb.studio.appearance.StudioTheme
+import com.vaticle.typedb.studio.common.theme.StudioTheme
 
 @Composable
 fun StudioTabs(modifier: Modifier = Modifier, orientation: TabOrientation = TabOrientation.HORIZONTAL,
@@ -104,7 +104,8 @@ fun StudioTab(
             Text(text, style = textStyle)
             if (showCloseButton) {
                 Spacer(Modifier.width(4.dp))
-                StudioIcon(Icon.Cross, color = StudioTheme.colors.icon.copy(alpha = 0.5f),
+                StudioIcon(
+                    Icon.Cross, color = StudioTheme.colors.icon.copy(alpha = 0.5f),
                     modifier = Modifier.clickable { onClose() })
                 Spacer(Modifier.width(4.dp))
             } else {

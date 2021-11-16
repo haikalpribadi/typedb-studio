@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.ui.elements
+package com.vaticle.typedb.studio.common.component
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.width
@@ -33,8 +33,8 @@ import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vaticle.typedb.studio.appearance.StudioTheme
-import com.vaticle.typedb.studio.ui.elements.IconSize.*
+import com.vaticle.typedb.studio.common.theme.StudioTheme
+import com.vaticle.typedb.studio.common.component.IconSize.*
 import java.io.InputStream
 
 @Composable

@@ -25,17 +25,15 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy
 import ch.qos.logback.core.util.FileSize
-import com.vaticle.typedb.studio.common.OS.LINUX
-import com.vaticle.typedb.studio.common.OS.MAC
-import com.vaticle.typedb.studio.common.OS.WINDOWS
-import com.vaticle.typedb.studio.common.currentOS
+import com.vaticle.typedb.studio.common.Property
+import mu.KotlinLogging
+import org.slf4j.LoggerFactory
 import java.lang.System.getProperty
 import java.lang.System.getenv
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.*
 import kotlin.io.path.notExists
-import mu.KotlinLogging
-import org.slf4j.LoggerFactory
 
 private const val WIN_ENV_APP_DATA = "AppData"
 private const val UNIX_PROP_USER_HOME = "user.home"
@@ -45,12 +43,21 @@ private const val APP_DIR_TYPEDB_STUDIO = "TypeDB Studio"
 private const val APP_LOG = "typedb-studio.log"
 private val LOG = KotlinLogging.logger {}
 
+fun currentOS(): Property.OS {
+    val osName = System.getProperty("os.name").lowercase(Locale.ENGLISH)
+    return when {
+        "mac" in osName || "darwin" in osName -> Property.OS.MAC
+        "win" in osName -> Property.OS.WINDOWS
+        else -> Property.OS.LINUX
+    }
+}
+
 class AppData {
     private val dataDir: Path = when (currentOS()) {
         // Source: https://stackoverflow.com/a/16660314/2902555
-        WINDOWS -> Path.of(getenv(WIN_ENV_APP_DATA), APP_DIR_TYPEDB_STUDIO)
-        MAC -> Path.of(getProperty(UNIX_PROP_USER_HOME), MAC_DIR_LIBRARY, MAC_DIR_APP_SUPPORT, APP_DIR_TYPEDB_STUDIO)
-        LINUX -> Path.of(getProperty(UNIX_PROP_USER_HOME), APP_DIR_TYPEDB_STUDIO)
+        Property.OS.WINDOWS -> Path.of(getenv(WIN_ENV_APP_DATA), APP_DIR_TYPEDB_STUDIO)
+        Property.OS.MAC -> Path.of(getProperty(UNIX_PROP_USER_HOME), MAC_DIR_LIBRARY, MAC_DIR_APP_SUPPORT, APP_DIR_TYPEDB_STUDIO)
+        Property.OS.LINUX -> Path.of(getProperty(UNIX_PROP_USER_HOME), APP_DIR_TYPEDB_STUDIO)
     }
 
     private var logFile = dataDir.resolve(APP_LOG).toFile()

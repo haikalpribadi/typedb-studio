@@ -37,7 +37,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vaticle.typedb.studio.appearance.StudioTheme
+import com.vaticle.typedb.studio.common.theme.StudioTheme
 import com.vaticle.typedb.studio.data.QueryResponseStream
 import java.math.BigDecimal
 import java.math.MathContext

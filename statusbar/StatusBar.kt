@@ -16,29 +16,23 @@
  *
  */
 
-package com.vaticle.typedb.studio.workspace
+package com.vaticle.typedb.studio.statusbar
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.Text
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vaticle.typedb.studio.common.theme.StudioTheme
-import com.vaticle.typedb.studio.common.component.Icon
-import com.vaticle.typedb.studio.common.component.StudioIcon
 
-@Composable
-fun SidebarPanelHeader(title: String, onCollapse: () -> Unit) {
-    PanelHeader(modifier = Modifier.fillMaxWidth()) {
-        Spacer(Modifier.width(6.dp))
-        Text(title, style = StudioTheme.typography.body2)
+object StatusBar {
 
-        Spacer(Modifier.weight(1f))
+    private val BAR_HEIGHT = 20.dp
 
-        StudioIcon(Icon.Minus, modifier = Modifier.width(16.dp).clickable { onCollapse() })
-        Spacer(Modifier.width(12.dp))
+    @Composable
+    fun Layout() {
+        Row(Modifier.fillMaxWidth().height(BAR_HEIGHT)) {
+
+        }
     }
 }

@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.ui.elements
+package com.vaticle.typedb.studio.common.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
@@ -28,7 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vaticle.typedb.studio.appearance.StudioTheme
+import com.vaticle.typedb.studio.common.theme.StudioTheme
 
 @Composable
 fun StudioSnackbarHost(snackbarHostState: SnackbarHostState) {

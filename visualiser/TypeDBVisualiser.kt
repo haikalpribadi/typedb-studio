@@ -61,9 +61,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.vaticle.typedb.studio.appearance.StudioTheme
-import com.vaticle.typedb.studio.appearance.VisualiserTheme
+import com.vaticle.typedb.studio.common.theme.StudioTheme
 import com.vaticle.typedb.studio.data.VertexEncoding
+import com.vaticle.typedb.studio.data.VisualiserTheme
 import mu.KotlinLogging.logger
 import java.awt.Polygon
 import kotlin.math.abs

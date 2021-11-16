@@ -16,10 +16,10 @@
  *
  */
 
-package com.vaticle.typedb.studio.appearance
+package com.vaticle.typedb.studio.data
 
 import androidx.compose.ui.graphics.Color
-import com.vaticle.typedb.studio.data.VertexEncoding
+import com.vaticle.typedb.studio.common.theme.VaticlePalette
 import com.vaticle.typedb.studio.data.VertexEncoding.*
 
 private val Gold = Color(0xFFEBC53D)
@@ -33,7 +33,7 @@ data class VisualiserTheme(
     val inferred: Color, val explanation: Color, val error: Color, val vertexLabel: Color,
 )
 
-fun defaultVisualiserTheme() = VisualiserTheme(
+val DEFAULT_VISUALISER_THEME = VisualiserTheme(
     background = VaticlePalette.Purple0,
     vertex = mapOf(
         THING_TYPE to VaticlePalette.Pink2,

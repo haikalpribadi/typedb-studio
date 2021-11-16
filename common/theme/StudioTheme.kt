@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.appearance
+package com.vaticle.typedb.studio.common.theme
 
 import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme

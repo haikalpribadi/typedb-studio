@@ -30,11 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vaticle.typedb.studio.appearance.StudioTheme
+import com.vaticle.typedb.studio.common.theme.StudioTheme
 import com.vaticle.typedb.studio.data.schemaString
 import com.vaticle.typedb.studio.data.valueString
-import com.vaticle.typedb.studio.ui.elements.StudioTextField
-import com.vaticle.typedb.studio.ui.elements.StudioTextFieldVariant
+import com.vaticle.typedb.studio.common.component.TextField
+import com.vaticle.typedb.studio.common.component.StudioTextFieldVariant
 import com.vaticle.typedb.studio.visualiser.VertexState
 
 @Composable
@@ -84,7 +84,7 @@ private fun Table(rows: List<List<String>>, modifier: Modifier = Modifier, colum
                                 fontWeight = if (columnIndex == 0) FontWeight.SemiBold else FontWeight.Normal
                             )
                             // In BasicTextField, readOnly = false is required to display a caret marker
-                            else -> StudioTextField(
+                            else -> TextField(
                                 value = cell, onValueChange = {},
                                 variant = StudioTextFieldVariant.UNDECORATED, readOnly = false,
                                 textStyle = StudioTheme.typography.body1.copy(fontWeight = if (columnIndex == 0) FontWeight.SemiBold else FontWeight.Normal)

@@ -18,20 +18,20 @@
 
 package com.vaticle.typedb.studio.common
 
-import com.vaticle.typedb.studio.common.OS.*
-import java.util.Locale
+object Label {
 
-enum class OS {
-    WINDOWS,
-    MAC,
-    LINUX
-}
-
-fun currentOS(): OS {
-    val osName = System.getProperty("os.name").lowercase(Locale.ENGLISH)
-    return when {
-        "mac" in osName || "darwin" in osName -> MAC
-        "win" in osName -> WINDOWS
-        else -> LINUX
-    }
+    const val STATUS = "Status"
+    const val ADDRESS = "Address"
+    const val CA_CERTIFICATE = "CA Certificate"
+    const val CANCEL = "Cancel"
+    const val CLOSE = "Close"
+    const val CONNECT = "Connect"
+    const val CONNECTING = "Connecting..."
+    const val CONNECT_TO_TYPEDB = "Connect to TypeDB"
+    const val DISCONNECT = "Disonnect"
+    const val PASSWORD = "Password"
+    const val PATH_TO_CA_CERTIFICATE = "path/to/ca/certificate"
+    const val SELECT_DATABASE = "Select database"
+    const val SERVER = "Server"
+    const val USERNAME = "Username"
 }

@@ -34,13 +34,16 @@ kt_jvm_library(
     ],
     kotlin_compiler_plugin = "@org_jetbrains_compose_compiler//file",
     deps = [
-        "//appearance",
-        "//common",
+        "//toolbar",
+        "//navigator",
+        "//page",
+        "//statusbar",
+
         "//data",
         "//connection:connection",
         "//routing",
         "//storage",
-        "//ui/elements",
+        "//common",
         "//workspace",
 
         # Maven

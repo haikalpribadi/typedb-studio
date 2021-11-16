@@ -18,15 +18,15 @@
 load("@vaticle_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
 load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
 
-package(default_visibility = ["//:__pkg__"])
+package(default_visibility = ["//visibility:public"])
 
 kt_jvm_library(
     name = "connection",
     srcs = glob(["*.kt"]),
     kotlin_compiler_plugin = "@org_jetbrains_compose_compiler//file",
     deps = [
-        "//appearance",
-        "//ui/elements",
+        "//service:service",
+        "//common",
         "//data",
         "//diagnostics",
         "//routing",

@@ -16,7 +16,7 @@
  *
  */
 
-package com.vaticle.typedb.studio.ui.elements
+package com.vaticle.typedb.studio.common.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -50,41 +50,44 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
-import com.vaticle.typedb.studio.appearance.StudioTheme
-import com.vaticle.typedb.studio.ui.elements.IconSize.*
+import com.vaticle.typedb.studio.common.Property
+import com.vaticle.typedb.studio.common.theme.StudioTheme
+import com.vaticle.typedb.studio.common.component.IconSize.Size16
+import java.awt.event.KeyEvent
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun StudioDropdownBox(
-    items: List<String>, text: String, onTextChange: (value: String) -> Unit, modifier: Modifier = Modifier,
+fun <T : Property.Displayable> Dropdown(
+    entries: Map<T, String>, selected: T, onSelection: (value: T) -> Unit, modifier: Modifier = Modifier,
     textFieldModifier: Modifier = Modifier, textStyle: TextStyle = StudioTheme.typography.body1,
-    leadingIcon: (@Composable () -> Unit)? = null
+    enabled: Boolean = true, placeholderText: String = "", leadingIcon: (@Composable () -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var textfieldSize by remember { mutableStateOf(Size.Zero)}
+    var textfieldSize by remember { mutableStateOf(Size.Zero) }
     var mouseOverIndex: Int? by remember { mutableStateOf(null) }
     val focusRequester = FocusRequester()
 
     Column(modifier) {
         Row {
-            StudioTextField(
-                value = text, onValueChange = { onTextChange(it) },
+            TextField(
+                value = selected.displayName, onValueChange = {},
                 modifier = textFieldModifier
                     .fillMaxSize()
                     .focusable()
                     .focusRequester(focusRequester)
-                    .clickable {
+                    .clickable(enabled = enabled) {
                         expanded = !expanded
                         focusRequester.requestFocus()
                     }
-                    .onKeyEvent {
-                        if (it.nativeKeyEvent.id == java.awt.event.KeyEvent.KEY_RELEASED) return@onKeyEvent false
-                        when (it.key) {
+                    .onKeyEvent() {
+                        if (!enabled) false
+                        else if (it.nativeKeyEvent.id == KeyEvent.KEY_RELEASED) false
+                        else when (it.key) {
                             Key.Enter, Key.NumPadEnter -> {
                                 expanded = !expanded
-                                return@onKeyEvent true
+                                true
                             }
-                            else -> return@onKeyEvent false
+                            else -> false
                         }
                     }
                     .onGloballyPositioned { coordinates ->
@@ -93,22 +96,24 @@ fun StudioDropdownBox(
                     },
                 readOnly = true, textStyle = textStyle, leadingIcon = leadingIcon,
                 trailingIcon = { StudioIcon(Icon.CaretDown, size = Size16) },
-                pointerHoverIcon = PointerIcon.Hand /*PointerIconDefaults.Hand*/
+                pointerHoverIcon = PointerIcon.Hand, // TODO: Upgrade to 1.0 and use PointerIconDefaults.Hand
+                placeholderText = placeholderText,
+                enabled = enabled
             )
         }
 
         Row {
             DropdownMenu(
-                expanded = expanded && items.isNotEmpty(), onDismissRequest = { expanded = false },
+                expanded = expanded && entries.isNotEmpty(), onDismissRequest = { expanded = false },
                 modifier = Modifier
                     .width(with(LocalDensity.current) { textfieldSize.width.toDp() })
                     .background(StudioTheme.colors.uiElementBackground)
             ) {
-                items.forEachIndexed { idx, label ->
+                entries.entries.forEachIndexed { idx, entry ->
                     DropdownMenuItem(
                         onClick = {
                             expanded = false
-                            onTextChange(label)
+                            onSelection(entry.key)
                         },
                         contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier.height(28.dp)
@@ -121,7 +126,11 @@ fun StudioDropdownBox(
                                 return@pointerMoveFilter true
                             }
                     ) {
-                        Text(label, style = textStyle, color = if (idx == mouseOverIndex) StudioTheme.colors.onPrimary else StudioTheme.colors.text)
+                        Text(
+                            entry.value,
+                            style = textStyle,
+                            color = if (idx == mouseOverIndex) StudioTheme.colors.onPrimary else StudioTheme.colors.text
+                        )
                     }
                 }
             }

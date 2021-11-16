@@ -16,25 +16,39 @@
  *
  */
 
-package com.vaticle.typedb.studio.workspace
+package com.vaticle.typedb.studio.common.component
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vaticle.typedb.studio.common.theme.StudioTheme
 
-@Composable
-fun PanelHeader(modifier: Modifier = Modifier, content: @Composable (RowScope.() -> Unit)) {
-    Row(
-        modifier = modifier.height(26.dp).background(StudioTheme.colors.background),
-        verticalAlignment = Alignment.CenterVertically) {
-        content()
+object Form {
+
+    private const val LABEL_WEIGHT = 2f
+    private const val INPUT_WEIGHT = 3f
+    private val FIELD_SPACING = 12.dp
+    private val FIELD_HEIGHT = 28.dp
+
+    val ColumnScope.LABEL_MODIFIER: Modifier get() = Modifier.weight(LABEL_WEIGHT).height(FIELD_HEIGHT)
+    val ColumnScope.INPUT_MODIFIER: Modifier get() = Modifier.weight(INPUT_WEIGHT).height(FIELD_HEIGHT)
+
+    @Composable
+    fun Field(content: @Composable () -> Unit) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            content()
+        }
     }
 
-    Row(modifier = modifier.height(1.dp).background(StudioTheme.colors.uiElementBorder)) {}
+    @Composable
+    fun FieldGroup(content: @Composable () -> Unit) {
+        Column(verticalArrangement = Arrangement.spacedBy(FIELD_SPACING)) {
+            content()
+        }
+    }
 }

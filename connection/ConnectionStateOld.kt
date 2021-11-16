@@ -51,7 +51,7 @@ fun connectionScreenStateOf(
     databasesLastLoadedAtMillis: Long?,
     loadingDatabases: Boolean
 ) = when (routeData) {
-    is ConnectionRoute.Cluster -> ConnectionState(
+    is ConnectionRoute.Cluster -> ConnectionStateOld(
         serverSoftware = CLUSTER, serverAddress = routeData.serverAddress,
         databasesLastLoadedFromAddress = databasesLastLoadedFromAddress,
         username = routeData.username, rootCAPath = routeData.rootCAPath,
@@ -59,7 +59,7 @@ fun connectionScreenStateOf(
         loadingDatabases = loadingDatabases,
         errorReporter = errorReporter
     )
-    else -> ConnectionState(
+    else -> ConnectionStateOld(
         serverSoftware = CORE,
         serverAddress = routeData.serverAddress,
         databasesLastLoadedFromAddress = databasesLastLoadedFromAddress,
@@ -69,7 +69,7 @@ fun connectionScreenStateOf(
     )
 }
 
-class ConnectionState(
+class ConnectionStateOld(
     serverSoftware: ServerSoftware = CORE,
     serverAddress: String = "127.0.0.1:1729",
     username: String = "",
