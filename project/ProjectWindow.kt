@@ -16,12 +16,26 @@
  *
  */
 
-package com.vaticle.typedb.studio.service
+package com.vaticle.typedb.studio.project
 
-object Service {
+import com.vaticle.typedb.studio.common.Label
+import com.vaticle.typedb.studio.service.Service
+import javax.swing.JFileChooser
 
-    val connection = ConnectionService()
-    val notifier = NotifierService()
-    val project = ProjectService()
 
+object ProjectWindow {
+
+    fun Layout() {
+        val directoryChooser = JFileChooser()
+        directoryChooser.dialogTitle = Label.OPEN_PROJECT_DIRECTORY
+        directoryChooser.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+        val option = directoryChooser.showOpenDialog(null)
+        if (option == JFileChooser.APPROVE_OPTION) {
+            val file = directoryChooser.selectedFile
+            println(file)
+        } else {
+            println("Open command canceled")
+        }
+        Service.project.showWindow = false
+    }
 }

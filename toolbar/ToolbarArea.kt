@@ -50,7 +50,7 @@ object ToolbarArea {
             modifier = Modifier.fillMaxWidth().height(TOOLBAR_HEIGHT),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OpenFileButton()
+            OpenProjectButton()
             SaveFileButton()
             PlayFileButton()
             Spacer(Modifier.weight(1f))
@@ -63,12 +63,12 @@ object ToolbarArea {
     }
 
     @Composable
-    private fun OpenFileButton() {
+    private fun OpenProjectButton() {
         Spacer(Modifier.width(10.dp))
         Icon.Render(
             icon = Icon.Set.FolderOpen,
             size = Icon.Size.Size14,
-            modifier = Modifier.clickable { }
+            modifier = Modifier.clickable { Service.project.showWindow = true }
         )
     }
 

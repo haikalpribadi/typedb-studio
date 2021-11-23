@@ -18,7 +18,11 @@
 
 package com.vaticle.typedb.studio.service
 
-class ErrorService {
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
+class ProjectService {
 
+    var showWindow: Boolean by mutableStateOf(false)
 }

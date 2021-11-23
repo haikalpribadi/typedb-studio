@@ -32,6 +32,7 @@ object Label {
     const val DISCONNECT = "Disconnect"
     const val ENABLE_TLS = "Enable TLS"
     const val NO_DATABASES = "No Databases"
+    const val OPEN_PROJECT_DIRECTORY = "Open Project Directory"
     const val OPTIONAL = "Optional"
     const val PASSWORD = "Password"
     const val PATH_TO_CA_CERTIFICATE = "path/to/ca/certificate"
