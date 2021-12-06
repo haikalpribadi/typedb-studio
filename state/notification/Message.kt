@@ -37,19 +37,36 @@ abstract class Message(codePrefix: String, codeNumber: Int, messagePrefix: Strin
         }
     }
 
+    class View(codeNumber: Int, messageBody: String) :
+        Message(CODE_PREFIX, codeNumber, MESSAGE_PREFIX, messageBody) {
+
+        companion object {
+            private const val CODE_PREFIX = "VIW"
+            private const val MESSAGE_PREFIX = "TypeDB View"
+
+            val CATALOG_EXPAND_LIMIT = View(
+                1, "Catalog view for '%s' reached the recommended maximum number of expanded items (%s). " +
+                        "Automatic expansion is limited for performance."
+            )
+        }
+    }
+
     class Connection(codeNumber: Int, messageBody: String) :
         Message(CODE_PREFIX, codeNumber, MESSAGE_PREFIX, messageBody) {
 
         companion object {
             private const val CODE_PREFIX = "CON"
-            private const val MESSAGE_PREFIX = "TypeDB Connection Error"
+            private const val MESSAGE_PREFIX = "TypeDB Connection"
 
-            val UNEXPECTED_ERROR =
-                Connection(1, "Unexpected error occurred with the connection to TypeDB server.")
-            val UNABLE_TO_CONNECT =
-                Connection(2, "Unable to connect to TypeDB server with the provided address and credentials.")
-            val UNABLE_CREATE_SESSION =
-                Connection(3, "Unable to establish session to database '%s'.")
+            val UNEXPECTED_ERROR = Connection(
+                1, "Unexpected error occurred with the connection to TypeDB server."
+            )
+            val UNABLE_TO_CONNECT = Connection(
+                2, "Unable to connect to TypeDB server with the provided address and credentials."
+            )
+            val UNABLE_CREATE_SESSION = Connection(
+                3, "Unable to establish session to database '%s'."
+            )
         }
     }
 
@@ -58,23 +75,23 @@ abstract class Message(codePrefix: String, codeNumber: Int, messagePrefix: Strin
 
         companion object {
             private const val CODE_PREFIX = "PRJ"
-            private const val MESSAGE_PREFIX = "TypeDB Project Error"
+            private const val MESSAGE_PREFIX = "TypeDB Project"
 
-            val UNEXPECTED_ERROR =
-                Project(1, "Unexpected error occurred with the project directory file system.")
-            val PATH_NOT_EXIST =
-                Project(2, "Project path '%s' does not exist.")
-            val PATH_NOT_READABLE =
-                Project(3, "Project path '%s' is not readable.")
-            val PATH_NOT_DIRECTORY =
-                Project(4, "Project path '%s' is not a directory.")
-            val PROJECT_CLOSED =
-                Project(5, "Project path '%s' has been closed.")
-            val MAX_DIR_EXPANDED_REACHED =
-                Project(
-                    6,
-                    "Project path '%s' reached the recommended maximum number of expanded file/directory (%s). We recommend opening a slightly smaller directory for better performance."
-                )
+            val UNEXPECTED_ERROR = Project(
+                1, "Unexpected error occurred with the project directory file system."
+            )
+            val PATH_NOT_EXIST = Project(
+                2, "Project path '%s' does not exist."
+            )
+            val PATH_NOT_READABLE = Project(
+                3, "Project path '%s' is not readable."
+            )
+            val PATH_NOT_DIRECTORY = Project(
+                4, "Project path '%s' is not a directory."
+            )
+            val PROJECT_CLOSED = Project(
+                5, "Project path '%s' has been closed."
+            )
         }
     }
 }

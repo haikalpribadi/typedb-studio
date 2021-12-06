@@ -18,20 +18,19 @@
 
 package com.vaticle.typedb.studio.state.project
 
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import com.vaticle.typedb.studio.state.common.Catalog
+import com.vaticle.typedb.studio.state.common.Navigable
 import java.nio.file.Path
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.listDirectoryEntries
 
 class Directory internal constructor(path: Path, parent: Directory?) :
-    Catalog.Item.Expandable<ProjectItem>, ProjectItem(path, parent) {
+    Navigable.Item.Container<ProjectItem>, ProjectItem(path, parent) {
 
-    override var isExpanded: Boolean by mutableStateOf(false); private set
-    override var entries: List<ProjectItem> by mutableStateOf(emptyList())
+    override var isNavigated: MutableState<Boolean> = mutableStateOf(false); private set
+    override var entries: MutableState<List<ProjectItem>> = mutableStateOf(emptyList())
     override val isDirectory: Boolean = true
 
     override fun asDirectory(): Directory {
@@ -42,40 +41,35 @@ class Directory internal constructor(path: Path, parent: Directory?) :
         throw TypeCastException("Invalid casting of Directory to File") // TODO: generalise
     }
 
-    override fun toggle(isExpanded: Boolean) {
-        this.isExpanded = isExpanded
-        if (isExpanded) reloadEntries()
-    }
-
-    internal fun reloadEntries() {
+    override fun reloadEntries() {
         val newPaths = path.listDirectoryEntries()
         val updatedDirs = updatedDirs(newPaths.filter { it.isDirectory() }.toSet())
         val updatedFiles = updatedFiles(newPaths.filter { it.isRegularFile() }.toSet())
-        entries = updatedDirs.sortedBy { it.name } + updatedFiles.sortedBy { it.name }
-        entries.filterIsInstance<Directory>().filter { it.isExpanded }.forEach { it.reloadEntries() }
+        entries.value = updatedDirs.sortedBy { it.name } + updatedFiles.sortedBy { it.name }
+        entries.value.filterIsInstance<Directory>().filter { it.isNavigated.value }.forEach { it.reloadEntries() }
     }
 
     private fun updatedDirs(new: Set<Path>): List<Directory> {
-        val old = entries.filter { it.isDirectory }.map { it.path }.toSet()
+        val old = entries.value.filter { it.isDirectory }.map { it.path }.toSet()
         val deleted = old - new
         val added = new - old
-        return entries.filterIsInstance<Directory>().filter { !(deleted).contains(it.path) } +
+        return entries.value.filterIsInstance<Directory>().filter { !(deleted).contains(it.path) } +
                 (added).map { Directory(it, this) }
     }
 
     private fun updatedFiles(new: Set<Path>): List<File> {
-        val old = entries.filter { it.isFile }.map { it.path }.toSet()
+        val old = entries.value.filter { it.isFile }.map { it.path }.toSet()
         val deleted = old - new
         val added = new - old
-        return entries.filterIsInstance<File>().filter { !(deleted).contains(it.path) } +
+        return entries.value.filterIsInstance<File>().filter { !(deleted).contains(it.path) } +
                 (added).map { File(it, this) }
     }
 
     internal fun checkForUpdate() {
-        if (!isExpanded) return
+        if (!isNavigated.value) return
         val new = path.listDirectoryEntries().toSet()
-        val old = entries.map { it.path }.toSet()
+        val old = entries.value.map { it.path }.toSet()
         if (new != old) reloadEntries()
-        entries.filterIsInstance<Directory>().filter { it.isExpanded }.forEach { it.checkForUpdate() }
+        entries.value.filterIsInstance<Directory>().filter { it.isNavigated.value }.forEach { it.checkForUpdate() }
     }
 }

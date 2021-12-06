@@ -41,7 +41,7 @@ import com.vaticle.typedb.studio.view.common.component.Icon
 import com.vaticle.typedb.studio.view.common.component.Separator
 import com.vaticle.typedb.studio.view.common.theme.Theme
 
-sealed class Navigator(private val areaState: NavigatorArea.AreaState, initOpen: Boolean = false) {
+sealed class Browser(private val areaState: BrowserArea.AreaState, initOpen: Boolean = false) {
 
     companion object {
         internal val MIN_HEIGHT = 80.dp
@@ -49,17 +49,15 @@ sealed class Navigator(private val areaState: NavigatorArea.AreaState, initOpen:
         private val BAR_SPACING = 8.dp
     }
 
-    data class ButtonArgs(val icon: Icon.Code, val onClick: () -> Unit)
-
     internal abstract val label: String
     internal abstract val icon: Icon.Code
     internal abstract val isActive: Boolean
-    internal abstract val buttons: List<ButtonArgs>
+    internal abstract val buttons: List<Form.ButtonArgs>
 
     internal var isOpen: Boolean by mutableStateOf(initOpen)
 
     @Composable
-    abstract fun Catalog()
+    abstract fun CatalogLayout()
 
     fun toggle() {
         isOpen = !isOpen
@@ -72,7 +70,7 @@ sealed class Navigator(private val areaState: NavigatorArea.AreaState, initOpen:
         Column {
             Bar()
             Separator.Horizontal()
-            Box(modifier = Modifier.weight(1f)) { Catalog() }
+            Box(modifier = Modifier.weight(1f)) { CatalogLayout() }
         }
     }
 
@@ -89,12 +87,13 @@ sealed class Navigator(private val areaState: NavigatorArea.AreaState, initOpen:
             Form.Text(value = label)
             Spacer(Modifier.weight(1f))
             Buttons(*buttons.toTypedArray(), isActive = isActive)
-            Buttons(ButtonArgs(Icon.Code.XMARK) { toggle() }, isActive = true)
+            Buttons(Form.ButtonArgs(Icon.Code.XMARK) { toggle() }, isActive = true)
         }
     }
 
+
     @Composable
-    private fun Buttons(vararg buttons: ButtonArgs, isActive: Boolean) {
+    private fun Buttons(vararg buttons: Form.ButtonArgs, isActive: Boolean) {
         buttons.forEach {
             Form.IconButton(
                 icon = it.icon,

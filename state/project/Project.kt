@@ -18,10 +18,9 @@
 
 package com.vaticle.typedb.studio.state.project
 
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import com.vaticle.typedb.studio.state.common.Catalog
+import com.vaticle.typedb.studio.state.common.Navigable
 import com.vaticle.typedb.studio.state.notification.Error
 import com.vaticle.typedb.studio.state.notification.Message
 import com.vaticle.typedb.studio.state.notification.Message.Project.Companion.PROJECT_CLOSED
@@ -39,7 +38,7 @@ import kotlinx.coroutines.launch
 import mu.KotlinLogging
 
 class Project internal constructor(val path: Path, val pageMgr: PageManager, val notificationMgr: NotificationManager) :
-    Catalog<ProjectItem> {
+    Navigable<ProjectItem> {
 
     companion object {
         @OptIn(ExperimentalTime::class)
@@ -47,24 +46,15 @@ class Project internal constructor(val path: Path, val pageMgr: PageManager, val
         private val LOGGER = KotlinLogging.logger {}
     }
 
-    override val entries: List<ProjectItem> get() = listOf(directory)
-    override var selected: ProjectItem? by mutableStateOf(null)
-
     val directory: Directory = Directory(path, null)
     val name: String get() = directory.name
+
+    override val entries: MutableState<List<ProjectItem>> = mutableStateOf(listOf(directory))
 
     private var coroutineScope: CoroutineScope = CoroutineScope(EmptyCoroutineContext)
 
     init {
-        directory.expand()
         initDirectoryWatcher(directory)
-    }
-
-    override fun open(item: ProjectItem) {
-        when (item) {
-            is Directory -> item.toggle()
-            is File -> pageMgr.open(item)
-        }
     }
 
     @OptIn(ExperimentalTime::class)

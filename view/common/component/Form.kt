@@ -101,6 +101,8 @@ object Form {
     private val RowScope.LABEL_MODIFIER: Modifier get() = Modifier.weight(LABEL_WEIGHT)
     private val RowScope.INPUT_MODIFIER: Modifier get() = Modifier.weight(INPUT_WEIGHT).height(FIELD_HEIGHT)
 
+    data class ButtonArgs(val icon: Icon.Code, val onClick: () -> Unit)
+
     interface State {
 
         fun isValid(): Boolean
