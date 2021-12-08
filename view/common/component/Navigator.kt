@@ -18,51 +18,13 @@
 
 package com.vaticle.typedb.studio.view.common.component
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.awtEvent
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.PointerEvent
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerIconDefaults
-import androidx.compose.ui.input.pointer.isPrimaryPressed
-import androidx.compose.ui.input.pointer.onPointerEvent
-import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vaticle.typedb.studio.state.common.Navigable
-import com.vaticle.typedb.studio.view.common.theme.Theme
-import com.vaticle.typedb.studio.view.common.theme.Theme.toDP
-import java.awt.event.KeyEvent.KEY_RELEASED
 
 object Navigator {
 
@@ -71,153 +33,84 @@ object Navigator {
     private val TEXT_SPACING = 4.dp
     private val AREA_PADDING = 8.dp
 
-    data class IconArgs(val code: Icon.Code, val color: @Composable () -> Color = { Theme.colors.icon })
+    private fun <T : Navigable.Item<T>> itemStateOf(
+        item: Navigable.Item<T>, container: ItemState.Expandable<T>?
+    ): ItemState<T> {
+        return if (item.isContainer) ItemState.Expandable(item.asContainer(), container) else ItemState(item, container)
+    }
 
-    private class NavigatorState {
+    open class ItemState<T : Navigable.Item<T>> internal constructor(
+        open val item: Navigable.Item<T>, val container: Expandable<T>?
+    ) : Comparable<ItemState<T>> {
+
+        open val isExpandable: Boolean = false
+        val name get() = item.name
+        val info get() = item.info
+
+        open fun asExpandable(): Expandable<T> {
+            throw TypeCastException("Illegal cast of Navigator.ItemState to Navigator.ItemState.Expandable")
+        }
+
+        override fun compareTo(other: ItemState<T>): Int {
+            return item.compareTo(other.item)
+        }
+
+        class Expandable<T : Navigable.Item<T>> internal constructor(
+            override val item: Navigable.Item.Container<T>, container: Expandable<T>?
+        ) : ItemState<T>(item, container) {
+
+            override val isExpandable: Boolean = true
+            var isExpanded: Boolean by mutableStateOf(false)
+            var entries: List<ItemState<T>> by mutableStateOf(emptyList())
+
+            override fun asExpandable(): Expandable<T> {
+                return this
+            }
+
+            fun expand() {
+                toggle(true)
+            }
+
+            fun collapse() {
+                toggle(false)
+            }
+
+            private fun toggle(isExpanded: Boolean) {
+                this.isExpanded = isExpanded
+                if (isExpanded) reloadEntries()
+            }
+
+            private fun reloadEntries() {
+                val new = item.entries.toSet()
+                val old = entries.map { it.item }.toSet()
+                val deleted = old - new
+                val added = new - old
+                val updatedEntries = entries.filter { !deleted.contains(it.item) } +
+                        added.map { itemStateOf(it, this) }.toList()
+                entries = updatedEntries.sorted()
+                entries.filterIsInstance<Expandable<*>>().filter { it.isExpanded }.forEach { it.reloadEntries() }
+            }
+        }
+    }
+
+
+    class NavigatorState<T : Navigable.Item<T>> internal constructor(container: Navigable<T>) {
+
         var minWidth by mutableStateOf(0.dp)
+        val entries: List<ItemState<T>> by mutableStateOf(container.entries.map { itemStateOf(it, null) })
+        val buttons: List<Form.ButtonArgs> = listOf(
+            Form.ButtonArgs(Icon.Code.CHEVRONS_DOWN) { /*expand()*/ },
+            Form.ButtonArgs(Icon.Code.CHEVRONS_UP) { /*collapse()*/ }
+        )
     }
 
     @Composable
-    fun <T : Navigable.Item<T>> Layout(
-        navigable: Navigable<T>, iconArgs: (T) -> IconArgs, itemHeight: Dp = ITEM_HEIGHT,
-        contextMenuFn: ((T) -> List<ContextMenu.Item>)? = null
-    ) {
-        val density = LocalDensity.current.density
-        val state = remember { NavigatorState() }
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .onSizeChanged { state.minWidth = toDP(it.width, density) }
-                .verticalScroll(rememberScrollState())
-                .horizontalScroll(rememberScrollState())
-        ) { NestedNavigator(0, navigable, navigable.entries, iconArgs, itemHeight, contextMenuFn, state) }
-    }
-
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
-    @Composable
-    private fun <T : Navigable.Item<T>> NestedNavigator(
-        depth: Int, navigable: Navigable<T>, items: List<T>, iconArgs: (T) -> IconArgs,
-        itemHeight: Dp, contextMenuFn: ((T) -> List<ContextMenu.Item>)?, state: NavigatorState
-    ) {
-        val density = LocalDensity.current.density
-        fun increaseToAtLeast(widthSize: Int) {
-            val newWidth = toDP(widthSize, density)
-            if (newWidth > state.minWidth) state.minWidth = newWidth
-        }
-        Column(modifier = Modifier.widthIn(min = state.minWidth).onSizeChanged { increaseToAtLeast(it.width) }) {
-            items.forEach { item ->
-                ContextMenu.Area(contextMenuFn?.let { { it(item) } }, { navigable.select(item) }) {
-                    ItemLayout(depth, navigable, item, iconArgs, itemHeight, { increaseToAtLeast(it) }, state)
-                }
-                if (item.isExpandable && item.asExpandable().isExpanded) NestedNavigator(
-                    depth + 1, navigable, item.asExpandable().entries, iconArgs, itemHeight, contextMenuFn, state
-                )
-            }
-        }
-    }
-
-    @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
-    @Composable
-    private fun <T : Navigable.Item<T>> ItemLayout(
-        depth: Int, navigable: Navigable<T>, item: T, iconArgs: (T) -> IconArgs,
-        itemHeight: Dp, onSizeChanged: (Int) -> Unit, state: NavigatorState
-    ) {
-        val focusReq = remember { FocusRequester() }.also { item.focusFn = { it.requestFocus() } }
-        val bgColor = when {
-            navigable.isSelected(item) -> Theme.colors.primary
-            else -> Color.Transparent
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.background(color = bgColor)
-                .widthIn(min = state.minWidth).height(itemHeight)
-                .onSizeChanged { onSizeChanged(it.width) }
-                .focusRequester(focusReq)
-                .onKeyEvent { onKeyEvent(it, navigable, item) }
-                .pointerHoverIcon(PointerIconDefaults.Hand)
-                .onPointerEvent(PointerEventType.Press) { onPointerEvent(it, focusReq, navigable, item) }
-                .clickable { }
-        ) {
-            if (depth > 0) Spacer(modifier = Modifier.width(ICON_WIDTH * depth))
-            ItemButton(item, itemHeight)
-            ItemIcon(item, iconArgs)
-            Spacer(Modifier.width(TEXT_SPACING))
-            ItemText(item)
-            Spacer(modifier = Modifier.width(AREA_PADDING))
-            Spacer(modifier = Modifier.weight(1f))
-        }
+    fun <T : Navigable.Item<T>> rememberNavigatorState(navigable: Navigable<T>): NavigatorState<T> {
+        return remember { NavigatorState(navigable) }
     }
 
     @Composable
-    private fun <T : Navigable.Item<T>> ItemButton(item: T, size: Dp) {
-        if (item.isExpandable) Form.RawClickableIcon(
-            icon = if (item.asExpandable().isExpanded) Icon.Code.CHEVRON_DOWN else Icon.Code.CHEVRON_RIGHT,
-            onClick = { item.asExpandable().toggle() },
-            modifier = Modifier.size(size)
-        ) else Spacer(Modifier.size(size))
-    }
+    fun <T : Navigable.Item<T>> Layout(navigatorState: NavigatorState<T>) {
 
-    @Composable
-    private fun <T : Navigable.Item<T>> ItemIcon(item: T, iconArgs: (T) -> IconArgs) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(ICON_WIDTH)) {
-            Icon.Render(icon = iconArgs(item).code, color = iconArgs(item).color())
-        }
-    }
-
-    @Composable
-    private fun <T : Navigable.Item<T>> ItemText(item: Navigable.Item<T>) {
-        Row(modifier = Modifier.height(ICON_WIDTH)) {
-            Form.Text(value = item.name)
-            item.info?.let {
-                Spacer(Modifier.width(TEXT_SPACING))
-                Form.Text(value = "( $it )", alpha = 0.4f)
-            }
-        }
-    }
-
-    @OptIn(ExperimentalComposeUiApi::class)
-    private fun <T : Navigable.Item<T>> onKeyEvent(event: KeyEvent, navigable: Navigable<T>, item: T): Boolean {
-        return when (event.awtEvent.id) {
-            KEY_RELEASED -> false
-            else -> when (event.key) {
-                Key.Enter, Key.NumPadEnter -> {
-                    if (navigable.isSelected(item)) navigable.open(item)
-                    else navigable.select(item)
-                    true
-                }
-                Key.DirectionLeft -> {
-                    if (item.isExpandable && item.asExpandable().isExpanded) item.asExpandable().collapse()
-                    else navigable.selectParent(item)
-                    true
-                }
-                Key.DirectionRight -> {
-                    if (item.isExpandable && !item.asExpandable().isExpanded) item.asExpandable().expand()
-                    else navigable.selectNext(item)
-                    true
-                }
-                Key.DirectionUp -> {
-                    navigable.selectPrevious(item)
-                    true
-                }
-                Key.DirectionDown -> {
-                    navigable.selectNext(item)
-                    true
-                }
-                else -> false
-            }
-        }
-    }
-
-    private fun <T : Navigable.Item<T>> onPointerEvent(
-        event: PointerEvent, focusReq: FocusRequester, navigable: Navigable<T>, item: T
-    ) {
-        when {
-            event.buttons.isPrimaryPressed -> when (event.awtEvent.clickCount) {
-                1 -> {
-                    navigable.select(item)
-                    focusReq.requestFocus()
-                }
-                2 -> navigable.open(item)
-            }
-        }
     }
 }

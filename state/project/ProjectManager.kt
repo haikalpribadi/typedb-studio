@@ -26,14 +26,13 @@ import com.vaticle.typedb.studio.state.notification.Message.Project.Companion.PA
 import com.vaticle.typedb.studio.state.notification.Message.Project.Companion.PATH_NOT_EXIST
 import com.vaticle.typedb.studio.state.notification.Message.Project.Companion.PATH_NOT_READABLE
 import com.vaticle.typedb.studio.state.notification.NotificationManager
-import com.vaticle.typedb.studio.state.page.PageManager
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isReadable
 import mu.KotlinLogging
 
-class ProjectManager(val pageMgr: PageManager, private val notificationMgr: NotificationManager) {
+class ProjectManager(private val notificationMgr: NotificationManager) {
 
     companion object {
         private val LOGGER = KotlinLogging.logger {}
@@ -52,8 +51,7 @@ class ProjectManager(val pageMgr: PageManager, private val notificationMgr: Noti
         else if (!path.isReadable()) notificationMgr.userError(Error.fromUser(PATH_NOT_READABLE, newDir), LOGGER)
         else if (!path.isDirectory()) notificationMgr.userError(Error.fromUser(PATH_NOT_DIRECTORY, newDir), LOGGER)
         else {
-            current?.close()
-            current = Project(path, pageMgr, notificationMgr)
+            current = Project(path)
             showDialog = false
         }
     }
