@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -100,7 +102,8 @@ object Navigator {
         var focusReq: FocusRequester? = null
         var next: ItemState<T>? by mutableStateOf(null)
         var previous: ItemState<T>? by mutableStateOf(null)
-        var depth: Int = 0
+        var index: Int by mutableStateOf(0)
+        var depth: Int by mutableStateOf(0)
 
         open fun asExpandable(): Expandable<T> {
             throw TypeCastException(ILLEGAL_CAST.message(ItemState::class.simpleName, Expandable::class.simpleName))
@@ -217,11 +220,11 @@ object Navigator {
         private val openFn: (ItemState<T>) -> Unit
     ) {
 
-        var hasFocus: Boolean by mutableStateOf(false)
         private var coroutineScope: CoroutineScope = CoroutineScope(EmptyCoroutineContext)
         private var container: Container<T> by mutableStateOf(Container(container, this)); private set
         internal var entries: List<ItemState<T>> by mutableStateOf(emptyList()); private set
         internal var minWidth by mutableStateOf(0.dp); private set
+        internal var viewState: LazyListState? by mutableStateOf(null)
         internal var selected: ItemState<T>? by mutableStateOf(null); private set
         internal var hovered: ItemState<T>? by mutableStateOf(null)
         val buttons: List<Form.ButtonArgs> = listOf(
@@ -288,9 +291,10 @@ object Navigator {
 
         internal fun recomputeList() {
             var previous: ItemState<T>? = null
-            entries = container.navigables().onEach { item ->
+            entries = container.navigables().onEachIndexed { i, item ->
                 previous?.let { it.next = item }
                 item.previous = previous
+                item.index = i
                 previous = item
             }
             previous?.next = null
@@ -305,11 +309,6 @@ object Navigator {
             openFn(item)
         }
 
-        fun select(item: ItemState<T>) {
-            selected = item
-            item.focusReq?.requestFocus()
-        }
-
         fun selectNext(item: ItemState<T>) {
             item.next?.let { select(it) }
         }
@@ -320,6 +319,20 @@ object Navigator {
 
         fun selectParent(item: ItemState<T>) {
             item.parent?.let { select(it) }
+        }
+
+        fun select(item: ItemState<T>) {
+            selected = item
+            mayScrollToSelected()
+            mayFocusOnSelected()
+        }
+
+        private fun mayScrollToSelected() {
+            viewState.layoutInfo.totalItemsCount
+        }
+
+        private fun mayFocusOnSelected() {
+            selected?.focusReq?.requestFocus()
         }
     }
 
@@ -334,21 +347,24 @@ object Navigator {
     @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     fun <T : Navigable.Item<T>> Layout(
-        navState: NavigatorState<T>, itemHeight: Dp = ITEM_HEIGHT,
-        iconArgs: (ItemState<T>) -> IconArgs, contextMenuFn: (ItemState<T>) -> List<ContextMenu.Item>
+        navState: NavigatorState<T>,
+        iconArgs: (ItemState<T>) -> IconArgs,
+        contextMenuFn: (ItemState<T>) -> List<ContextMenu.Item>
     ) {
         val density = LocalDensity.current.density
+        val ctmState = ContextMenu.rememberState()
+        val lazyListState = rememberLazyListState()
+        navState.viewState = lazyListState
         Box(modifier = Modifier.fillMaxSize().onSizeChanged { navState.mayIncreaseMinWidth(toDP(it.width, density)) }) {
-            val ctmState = ContextMenu.rememberState()
-            ContextMenu.Popup(ctmState, contextMenuFn.let { { it(navState.selected!!) } })
+            ContextMenu.Popup(ctmState) { contextMenuFn(navState.selected!!) }
             LazyColumn(
-                modifier = Modifier.widthIn(min = navState.minWidth)
-                    .horizontalScroll(rememberScrollState())
+                state = lazyListState, modifier = Modifier.widthIn(min = navState.minWidth)
+                    .horizontalScroll(state = rememberScrollState())
                     .pointerMoveFilter(onExit = { navState.hovered = null; false })
             ) {
                 navState.entries.forEach {
                     item {
-                        ItemLayout(navState, ctmState, it, it.depth, itemHeight, iconArgs) {
+                        ItemLayout(navState, ctmState, it, it.depth, iconArgs) {
                             navState.mayIncreaseMinWidth(toDP(it, density))
                         }
                     }
@@ -360,8 +376,7 @@ object Navigator {
     @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
     @Composable
     private fun <T : Navigable.Item<T>> ItemLayout(
-        navState: NavigatorState<T>, contextMenuState: ContextMenu.State,
-        item: ItemState<T>, depth: Int, itemHeight: Dp = ITEM_HEIGHT,
+        navState: NavigatorState<T>, contextMenuState: ContextMenu.State, item: ItemState<T>, depth: Int,
         iconArgs: (ItemState<T>) -> IconArgs, onSizeChanged: (Int) -> Unit
     ) {
         item.focusReq = remember { FocusRequester() }
@@ -373,7 +388,7 @@ object Navigator {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.background(color = bgColor)
-                .widthIn(min = navState.minWidth).height(itemHeight)
+                .widthIn(min = navState.minWidth).height(ITEM_HEIGHT)
                 .onSizeChanged { onSizeChanged(it.width) }
                 .focusRequester(item.focusReq!!).focusable()
                 .onKeyEvent { onKeyEvent(it, navState, item) }
@@ -382,7 +397,7 @@ object Navigator {
                 .pointerMoveFilter(onEnter = { navState.hovered = item; false })
         ) {
             if (depth > 0) Spacer(modifier = Modifier.width(ICON_WIDTH * depth))
-            ItemButton(item, itemHeight)
+            ItemButton(item)
             ItemIcon(item, iconArgs)
             Spacer(Modifier.width(TEXT_SPACING))
             ItemText(item)
@@ -392,12 +407,12 @@ object Navigator {
     }
 
     @Composable
-    private fun <T : Navigable.Item<T>> ItemButton(item: ItemState<T>, size: Dp) {
+    private fun <T : Navigable.Item<T>> ItemButton(item: ItemState<T>) {
         if (item.isExpandable) Form.RawClickableIcon(
             icon = if (item.asExpandable().isExpanded) Icon.Code.CHEVRON_DOWN else Icon.Code.CHEVRON_RIGHT,
             onClick = { item.asExpandable().toggle() },
-            modifier = Modifier.size(size)
-        ) else Spacer(Modifier.size(size))
+            modifier = Modifier.size(ITEM_HEIGHT)
+        ) else Spacer(Modifier.size(ITEM_HEIGHT))
     }
 
     @Composable
