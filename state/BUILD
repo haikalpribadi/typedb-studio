@@ -25,6 +25,7 @@ kt_jvm_library(
     srcs = glob(["*.kt"]),
     deps = [
         "//state/common:common",
+        "//state/types:concept",
         "//state/connection:connection",
         "//state/notification:notification",
         "//state/page:page",

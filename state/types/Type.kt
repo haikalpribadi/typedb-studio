@@ -16,19 +16,27 @@
  *
  */
 
-package com.vaticle.typedb.studio.state
+package com.vaticle.typedb.studio.state.types
 
-import com.vaticle.typedb.studio.state.types.TypeManager
-import com.vaticle.typedb.studio.state.connection.ConnectionManager
-import com.vaticle.typedb.studio.state.notification.NotificationManager
-import com.vaticle.typedb.studio.state.page.PageManager
-import com.vaticle.typedb.studio.state.project.ProjectManager
+import com.vaticle.typedb.studio.state.common.Navigable
 
-object State {
+class Type: Navigable.Container<Type> {
 
-    val notification = NotificationManager()
-    val connection = ConnectionManager(notification)
-    val page = PageManager(notification)
-    val project = ProjectManager(notification)
-    val types = TypeManager(notification)
+    override val name: String
+        get() = TODO("Not yet implemented")
+    override val parent: Navigable.ExpandableItem<Type>?
+        get() = TODO("Not yet implemented")
+    override val info: String?
+        get() = TODO("Not yet implemented")
+    override val entries: List<Type>
+        get() = TODO("Not yet implemented")
+
+    override fun reloadEntries() {
+        TODO("Not yet implemented")
+    }
+
+    override fun compareTo(other: Navigable.Item<Type>): Int {
+        TODO("Not yet implemented")
+    }
+
 }

@@ -51,6 +51,7 @@ object Label {
     const val SELECT_DATABASE = "Select Database"
     const val TITLE = "Title"
     const val TRACE = "Trace"
+    const val TYPE_BROWSER = "Type Browser"
     const val TYPEDB_STUDIO = "TypeDB Studio"
     const val TYPEDB_STUDIO_APPLICATION_ERROR = "TypeDB Studio Application Error"
     const val TYPES = "Types"

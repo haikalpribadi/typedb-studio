@@ -28,10 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.vaticle.typedb.studio.state.State
+import com.vaticle.typedb.studio.state.types.Type
 import com.vaticle.typedb.studio.view.common.Label
+import com.vaticle.typedb.studio.view.common.component.ContextMenu
 import com.vaticle.typedb.studio.view.common.component.Form
 import com.vaticle.typedb.studio.view.common.component.Form.ButtonArgs
 import com.vaticle.typedb.studio.view.common.component.Icon
+import com.vaticle.typedb.studio.view.common.component.Navigator
 import com.vaticle.typedb.studio.view.common.theme.Theme
 import com.vaticle.typedb.studio.view.dialog.SelectDatabaseDialog
 
@@ -49,8 +52,27 @@ internal class TypeBrowser(areaState: BrowserArea.AreaState, order: Int, initOpe
         if (!State.connection.isConnected()) ConnectToServerHelper()
         else if (!State.connection.hasDatabase() || selectDBDialogState.showDialog) SelectDBHelper(selectDBDialogState)
         else {
-
+            val state = Navigator.rememberNavigatorState(
+                container = State.types.root!!,
+                title = Label.TYPE_BROWSER,
+                initExpandDepth = 1,
+                liveUpdate = true
+            ) { typeOpen(it) }
+            buttons = state.buttons
+            Navigator.Layout(navState = state, iconArgs = { typeIcon(it) }) { contextMenuItems(it) }
         }
+    }
+
+    private fun typeOpen(itemState: Navigator.ItemState<Type>) {
+
+    }
+
+    private fun typeIcon(itemState: Navigator.ItemState<Type>): Form.IconArgs {
+
+    }
+
+    private fun contextMenuItems(itemState: Navigator.ItemState<Type>): List<ContextMenu.Item> {
+
     }
 
     @Composable

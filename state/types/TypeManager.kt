@@ -16,19 +16,13 @@
  *
  */
 
-package com.vaticle.typedb.studio.state
+package com.vaticle.typedb.studio.state.types
 
-import com.vaticle.typedb.studio.state.types.TypeManager
-import com.vaticle.typedb.studio.state.connection.ConnectionManager
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import com.vaticle.typedb.studio.state.notification.NotificationManager
-import com.vaticle.typedb.studio.state.page.PageManager
-import com.vaticle.typedb.studio.state.project.ProjectManager
 
-object State {
+class TypeManager(notificationMgr: NotificationManager) {
 
-    val notification = NotificationManager()
-    val connection = ConnectionManager(notification)
-    val page = PageManager(notification)
-    val project = ProjectManager(notification)
-    val types = TypeManager(notification)
+    val root: Type? by mutableStateOf(null)
 }
