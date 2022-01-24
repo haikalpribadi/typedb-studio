@@ -29,6 +29,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.isTypedEvent
+import androidx.compose.foundation.text.selection.TextFieldPreparedSelection
+import androidx.compose.foundation.text.showCharacterPalette
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,6 +47,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.awtEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType.Companion.Move
 import androidx.compose.ui.input.pointer.PointerEventType.Companion.Press
 import androidx.compose.ui.input.pointer.PointerEventType.Companion.Release
@@ -57,6 +63,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.CommitTextCommand
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vaticle.typedb.studio.state.project.File
@@ -84,6 +91,8 @@ object TextEditor2 {
     private val AREA_PADDING_HORIZONTAL = 6.dp
     private val DEFAULT_FONT_WIDTH = 12.dp
     private val CURSOR_LINE_PADDING = 2.dp
+
+    private val keyMapping: KeyMapping = platformDefaultKeyMapping
 
     internal data class Cursor(val row: Int, val col: Int) : Comparable<Cursor> {
         override fun compareTo(other: Cursor): Int {
@@ -201,6 +210,127 @@ object TextEditor2 {
             }
             if (y < textAreaRect.top) verScroller.updateOffset((y - textAreaRect.top.toInt()).dp)
             else if (y > textAreaRect.bottom) verScroller.updateOffset((y - textAreaRect.bottom.toInt()).dp)
+        }
+
+        fun process(event: KeyEvent): Boolean {
+            if (event.isTypedEvent) {
+                CommitTextCommand(event.awtEvent.keyChar.toString(), 1).apply()
+                preparedSelectionState.resetCachedX()
+                return true
+            }
+            if (event.type != KeyEventType.KeyDown) {
+                return false
+            }
+            val command = keyMapping.map(event)
+            if (command == null || (command.editsText && !editable)) {
+                return false
+            }
+            var consumed = true
+            commandExecutionContext {
+                when (command) {
+                    KeyCommand.COPY -> selectionManager.copy(false)
+                    KeyCommand.PASTE -> selectionManager.paste()
+                    KeyCommand.CUT -> selectionManager.cut()
+                    KeyCommand.LEFT_CHAR -> collapseLeftOr { moveCursorLeft() }
+                    KeyCommand.RIGHT_CHAR -> collapseRightOr { moveCursorRight() }
+                    KeyCommand.LEFT_WORD -> moveCursorLeftByWord()
+                    KeyCommand.RIGHT_WORD -> moveCursorRightByWord()
+                    KeyCommand.PREV_PARAGRAPH -> moveCursorPrevByParagraph()
+                    KeyCommand.NEXT_PARAGRAPH -> moveCursorNextByParagraph()
+                    KeyCommand.UP -> moveCursorUpByLine()
+                    KeyCommand.DOWN -> moveCursorDownByLine()
+                    KeyCommand.PAGE_UP -> moveCursorUpByPage()
+                    KeyCommand.PAGE_DOWN -> moveCursorDownByPage()
+                    KeyCommand.LINE_START -> moveCursorToLineStart()
+                    KeyCommand.LINE_END -> moveCursorToLineEnd()
+                    KeyCommand.LINE_LEFT -> moveCursorToLineLeftSide()
+                    KeyCommand.LINE_RIGHT -> moveCursorToLineRightSide()
+                    KeyCommand.HOME -> moveCursorToHome()
+                    KeyCommand.END -> moveCursorToEnd()
+                    KeyCommand.DELETE_PREV_CHAR ->
+                        deleteIfSelectedOr {
+                            moveCursorPrev().selectMovement().deleteSelected()
+                        }
+                    KeyCommand.DELETE_NEXT_CHAR -> {
+                        deleteIfSelectedOr {
+                            moveCursorNext().selectMovement().deleteSelected()
+                        }
+                    }
+                    KeyCommand.DELETE_PREV_WORD ->
+                        deleteIfSelectedOr {
+                            moveCursorPrevByWord().selectMovement().deleteSelected()
+                        }
+                    KeyCommand.DELETE_NEXT_WORD ->
+                        deleteIfSelectedOr {
+                            moveCursorNextByWord().selectMovement().deleteSelected()
+                        }
+                    KeyCommand.DELETE_FROM_LINE_START ->
+                        deleteIfSelectedOr {
+                            moveCursorToLineStart().selectMovement().deleteSelected()
+                        }
+                    KeyCommand.DELETE_TO_LINE_END ->
+                        deleteIfSelectedOr {
+                            moveCursorToLineEnd().selectMovement().deleteSelected()
+                        }
+                    KeyCommand.NEW_LINE ->
+                        if (!singleLine) {
+                            CommitTextCommand("\n", 1).apply()
+                        } else {
+                            consumed = false
+                        }
+                    KeyCommand.TAB ->
+                        if (!singleLine) {
+                            CommitTextCommand("\t", 1).apply()
+                        } else {
+                            consumed = false
+                        }
+                    KeyCommand.SELECT_ALL -> selectAll()
+                    KeyCommand.SELECT_LEFT_CHAR -> moveCursorLeft().selectMovement()
+                    KeyCommand.SELECT_RIGHT_CHAR -> moveCursorRight().selectMovement()
+                    KeyCommand.SELECT_LEFT_WORD -> moveCursorLeftByWord().selectMovement()
+                    KeyCommand.SELECT_RIGHT_WORD -> moveCursorRightByWord().selectMovement()
+                    KeyCommand.SELECT_PREV_PARAGRAPH -> moveCursorPrevByParagraph().selectMovement()
+                    KeyCommand.SELECT_NEXT_PARAGRAPH -> moveCursorNextByParagraph().selectMovement()
+                    KeyCommand.SELECT_LINE_START -> moveCursorToLineStart().selectMovement()
+                    KeyCommand.SELECT_LINE_END -> moveCursorToLineEnd().selectMovement()
+                    KeyCommand.SELECT_LINE_LEFT -> moveCursorToLineLeftSide().selectMovement()
+                    KeyCommand.SELECT_LINE_RIGHT -> moveCursorToLineRightSide().selectMovement()
+                    KeyCommand.SELECT_UP -> moveCursorUpByLine().selectMovement()
+                    KeyCommand.SELECT_DOWN -> moveCursorDownByLine().selectMovement()
+                    KeyCommand.SELECT_PAGE_UP -> moveCursorUpByPage().selectMovement()
+                    KeyCommand.SELECT_PAGE_DOWN -> moveCursorDownByPage().selectMovement()
+                    KeyCommand.SELECT_HOME -> moveCursorToHome().selectMovement()
+                    KeyCommand.SELECT_END -> moveCursorToEnd().selectMovement()
+                    KeyCommand.DESELECT -> deselect()
+                    KeyCommand.UNDO -> {
+                        undoManager?.makeSnapshot(value)
+                        undoManager?.undo()?.let { this@TextFieldKeyInput.state.onValueChange(it) }
+                    }
+                    KeyCommand.REDO -> {
+                        undoManager?.redo()?.let { this@TextFieldKeyInput.state.onValueChange(it) }
+                    }
+                    KeyCommand.CHARACTER_PALETTE -> {
+                        showCharacterPalette()
+                    }
+                }
+            }
+            undoManager?.forceNextSnapshot()
+            return consumed
+        }
+
+        private fun commandExecutionContext(block: TextFieldPreparedSelection.() -> Unit) {
+            val preparedSelection = TextFieldPreparedSelection(
+                currentValue = value,
+                offsetMapping = offsetMapping,
+                layoutResultProxy = state.layoutResult,
+                state = preparedSelectionState
+            )
+            block(preparedSelection)
+            if (preparedSelection.selection != value.selection ||
+                preparedSelection.annotatedString != value.annotatedString
+            ) {
+                state.onValueChange(preparedSelection.value)
+            }
         }
     }
 
