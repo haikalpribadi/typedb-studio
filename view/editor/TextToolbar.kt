@@ -18,10 +18,8 @@
 
 package com.vaticle.typedb.studio.view.editor
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -35,9 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vaticle.typedb.studio.view.common.Label
 import com.vaticle.typedb.studio.view.common.component.Form
@@ -56,26 +52,19 @@ object TextToolbar {
 
     @Composable
     internal fun Area(state: TextFinder) {
-        Column {
-            Finder(state)
-            if (state.showReplacer) {
-                var inputTextWidth by remember { mutableStateOf(0.dp) }
-                ToolbarLineSeparator(inputTextWidth)
-                Replacer(state) { inputTextWidth = it }
-            }
+        Row {
+            FindAndReplaceTextInputs(state)
+            Separator.Vertical()
+            FinderToggles(state)
+            Buttons(state)
             Separator.Horizontal()
         }
     }
 
-    @Composable
-    private fun ToolbarLineSeparator(inputTextWidth: Dp) {
-        Spacer(Modifier.height(Separator.WEIGHT).width(inputTextWidth).background(Theme.colors.border))
-    }
-
     @OptIn(ExperimentalComposeUiApi::class)
     @Composable
-    private fun Finder(state: TextFinder) {
-        Row(Modifier.height(ROW_HEIGHT).width(MAX_WIDTH)) {
+    private fun FindAndReplaceTextInputs(state: TextFinder) {
+        Column(Modifier.width(MAX_WIDTH)) {
             Form.TextInput(
                 value = state.findText,
                 placeholder = Label.FIND,
@@ -83,19 +72,41 @@ object TextToolbar {
                 leadingIcon = Icon.Code.MAGNIFYING_GLASS,
                 shape = null,
                 border = null,
-                modifier = Modifier.height(ROW_HEIGHT).weight(1f),
+                modifier = Modifier.weight(1f),
                 // TODO: figure out how to set min width to MIN_WIDTH
             )
-            Form.IconButton(
-                Icon.Code.FONT_CASE,
-                onClick = { state.toggleCaseSensitive() },
-                modifier = Modifier.size(ROW_HEIGHT),
-                iconColor = if (state.isCaseSensitive) Theme.colors.secondary else Theme.colors.icon,
-                bgColor = Theme.colors.surface,
-                rounded = false
-            )
-            Separator.Vertical()
+            if (state.showReplacer) {
+                Separator.Horizontal()
+                Form.TextInput(
+                    value = state.replaceText,
+                    placeholder = Label.REPLACE,
+                    onValueChange = { state.replaceText = it },
+                    leadingIcon = Icon.Code.RIGHT_LEFT,
+                    shape = null,
+                    border = null,
+                    modifier = Modifier.weight(1f),
+                    // TODO: figure out how to set min width to MIN_WIDTH
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun FinderToggles(state: TextFinder) {
+        Form.IconButton(
+            Icon.Code.FONT_CASE,
+            onClick = { state.toggleCaseSensitive() },
+            modifier = Modifier.size(ROW_HEIGHT),
+            iconColor = if (state.isCaseSensitive) Theme.colors.secondary else Theme.colors.icon,
+            bgColor = Theme.colors.surface,
+            rounded = false
+        )
+    }
+
+    private fun Buttons(state: TextFinder) {
+        Column {
             FinderButtons(state)
+            ReplacerButton(state)
         }
     }
 
@@ -126,25 +137,6 @@ object TextToolbar {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-        }
-    }
-
-    @OptIn(ExperimentalComposeUiApi::class)
-    @Composable
-    private fun Replacer(state: TextFinder, onResizeInputText: (Dp) -> Unit) {
-        Row(Modifier.height(ROW_HEIGHT).width(MAX_WIDTH)) {
-            Form.TextInput(
-                value = state.replaceText,
-                placeholder = Label.REPLACE,
-                onValueChange = { state.replaceText = it },
-                leadingIcon = Icon.Code.RIGHT_LEFT,
-                shape = null,
-                border = null,
-                modifier = Modifier.weight(1f).onSizeChanged { onResizeInputText(Theme.toDP(it.width, state.density)) },
-                // TODO: figure out how to set min width to MIN_WIDTH
-            )
-            Separator.Vertical()
-            ReplacerButton(state)
         }
     }
 
