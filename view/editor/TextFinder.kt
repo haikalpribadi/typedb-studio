@@ -53,10 +53,10 @@ internal class TextFinder(private val file: File) {
         matchesByLine = mapOf()
     }
 
-    internal fun mayRecompute(fromIndex: Int = 0) {
+    internal fun mayRecompute(from: Cursor = Cursor(0, 0)) {
         pattern?.let {
             updateContent()
-            computeMatches(fromIndex)
+            computeMatches(index(from))
         }
     }
 
@@ -90,13 +90,14 @@ internal class TextFinder(private val file: File) {
         try {
             pattern = Pattern.compile(patternStr, caseFlag or literalFlag)
             computeMatches(0)
-            updatePosition(0)
+            trySetPosition(0)
         } catch (e: Exception) {
             reset()
         }
     }
 
     private fun computeMatches(fromIndex: Int) {
+        println("computeMatches() -> fromIndex: $fromIndex")
         val byLine = mutableMapOf<Int, MutableList<Selection>>()
         val matcher = pattern!!.matcher(content)
         matches = if (matcher.find(fromIndex)) matcher.results().map { selection(it) }.toList() else listOf()
@@ -121,7 +122,19 @@ internal class TextFinder(private val file: File) {
         return Cursor(row, col)
     }
 
-    internal fun updatePosition(newPosition: Int): Int {
+    private fun index(cursor: Cursor): Int {
+        var index = 0
+        (0..cursor.row).forEach { i ->
+            index += when {
+                i < cursor.row -> lineInfo[i].length
+                else -> cursor.col
+            }
+            if (i > 0) index += 1
+        }
+        return index
+    }
+
+    internal fun trySetPosition(newPosition: Int): Int {
         position = newPosition.coerceIn(0, (matches.size - 1).coerceAtLeast(0))
         return position
     }
@@ -130,15 +143,19 @@ internal class TextFinder(private val file: File) {
         return if (hasMatches) matches[position] else null
     }
 
+    internal fun findFirst(): Selection? {
+        return if (hasMatches) matches[trySetPosition(0)] else null
+    }
+
     internal fun findNext(): Selection? {
-        return if (hasMatches) matches[updatePosition((position + 1) % matches.size)] else null
+        return if (hasMatches) matches[trySetPosition((position + 1) % matches.size)] else null
     }
 
     internal fun findPrevious(): Selection? {
         return if (hasMatches) {
             var newPos = position - 1
             if (newPos < 0) newPos += matches.size
-            matches[updatePosition(newPos)]
+            matches[trySetPosition(newPos)]
         } else null
     }
 
