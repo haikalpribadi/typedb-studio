@@ -18,8 +18,6 @@
 
 package com.vaticle.typedb.studio.state.project
 
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.vaticle.typedb.studio.state.common.Message.Project.Companion.FILE_NOT_READABLE
 import com.vaticle.typedb.studio.state.common.Message.System.Companion.ILLEGAL_CAST
 import com.vaticle.typedb.studio.state.common.Property
@@ -36,7 +34,6 @@ import mu.KotlinLogging
 class File internal constructor(path: Path, parent: Directory, notificationMgr: NotificationManager) :
     ProjectItem(Type.FILE, path, parent, notificationMgr), Pageable {
 
-    val content: SnapshotStateList<String> = mutableStateListOf()
     val extension: String = this.path.extension
     val isTypeQL: Boolean = Property.File.TYPEQL.extensions.contains(extension)
     val isTextFile: Boolean = checkIsTextFile()
@@ -60,10 +57,8 @@ class File internal constructor(path: Path, parent: Directory, notificationMgr: 
 
     override fun tryOpen(): Boolean {
         return try {
-            content.clear()
             if (isTextFile) loadTextFile()
             else loadBinaryFile()
-            if (content.isEmpty()) content.add("")
             true
         } catch (e: Exception) { // TODO: specialise error message to actual error, e.g. read/write permissions
             notificationMgr.userError(LOGGER, FILE_NOT_READABLE, path)
@@ -71,21 +66,30 @@ class File internal constructor(path: Path, parent: Directory, notificationMgr: 
         }
     }
 
-    private fun loadTextFile() {
-        content.addAll(Files.readAllLines(path))
+    fun readFile(): List<String> {
+        return if (isTextFile) loadTextFile() else loadBinaryFile()
     }
 
-    private fun loadBinaryFile() {
+    private fun loadTextFile(): List<String> {
+        val content = Files.readAllLines(path)
+        if (content.isEmpty()) content.add("")
+        return content
+    }
+
+    private fun loadBinaryFile(): List<String> {
         val reader = BufferedReader(InputStreamReader(FileInputStream(path.toFile())))
+        val content = mutableListOf<String>()
         var line: String?
-        while (reader.readLine().let { line = it; line } != null) content.add(line!!)
+        while (reader.readLine().let { line = it; line != null }) content.add(line!!)
+        if (content.isEmpty()) content.add("")
+        return content
     }
 
     fun save() {
-        Files.write(path, content)
+        // TODO: Files.write(path, content)
     }
 
     override fun close() {
-        content.clear()
+        // TODO
     }
 }

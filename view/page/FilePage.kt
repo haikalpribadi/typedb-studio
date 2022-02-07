@@ -35,11 +35,10 @@ class FilePage(val file: File) : Page(file) {
         else -> Form.IconArgs(Icon.Code.FILE_LINES)
     }
 
-    private var editorState: TextEditor.State? = null
+    private var editorState: TextEditor.State = TextEditor.createState(file)
 
     @Composable
     override fun Layout(onClose: () -> Unit) {
-        if (editorState == null) editorState = TextEditor.createState(file, onClose)
-        TextEditor.Area(state = editorState!!, modifier = Modifier.fillMaxSize())
+        TextEditor.Area(state = editorState, modifier = Modifier.fillMaxSize(), onClose = onClose)
     }
 }
