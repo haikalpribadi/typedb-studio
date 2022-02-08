@@ -33,11 +33,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vaticle.typedb.studio.view.common.theme.Color.fadeable
 import com.vaticle.typedb.studio.view.common.theme.Theme
+import java.nio.file.Path
 
 object Icon {
 
     private val ICON_DEFAULT_SIZE: TextUnit = 12.sp
-    private val FONT_AWESOME = FontFamily(Font(resource = "icons/fontawesome/font-awesome-6-pro-solid-900.otf"))
+    private val FONT_AWESOME = FontFamily(Font(Path.of("resources/icons/fontawesome/font-awesome-6-pro-solid-900.otf").toFile()))
 
     data class Offset(val x: Dp, val y: Dp)
 
