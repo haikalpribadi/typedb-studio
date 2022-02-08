@@ -22,6 +22,7 @@ import com.vaticle.typedb.common.yaml.YAML
 import com.vaticle.typedb.studio.view.highlighter.common.Scheme
 import com.vaticle.typedb.studio.view.highlighter.common.Lexer
 import com.vaticle.typedb.studio.view.highlighter.common.Lexer.Token
+import com.vaticle.typeql.grammar.TypeQLLexer.VOCABULARY
 import com.vaticle.typeql.lang.TypeQL
 import java.nio.file.Path
 import org.antlr.v4.runtime.CommonTokenStream
@@ -38,16 +39,20 @@ object TypeQLLexer : Lexer {
         val scopes = mutableMapOf<String, String>()
         val yaml = YAML.load(TYPEQL_SCOPES_FILE).asMap()
         yaml.forEach { antlrToken, scope -> scopes[antlrToken] = scope.asString().value() }
+        println("TypeQL Scopes: $scopes")
         return scopes
     }
 
     override fun tokenize(text: String, scheme: Scheme): List<Token> {
         val tokenStream = CommonTokenStream(TypeQL.lexer(text))
         tokenStream.fill()
-        return tokenStream.tokens.map { Token(text, scheme.scopes[tokenScope[antlrTokenName(it)]]!!) }
+        val antlrTokens = tokenStream.tokens.filter { it.type > 0 }
+        return antlrTokens.map {
+            Token(text, scheme.scopes[tokenScope[antlrTokenName(it)]]!!)
+        }
     }
 
     private fun antlrTokenName(antlrToken: org.antlr.v4.runtime.Token): String {
-        return com.vaticle.typeql.grammar.TypeQLLexer.VOCABULARY.getDisplayName(antlrToken.type)
+        return VOCABULARY.getSymbolicName(antlrToken.type)
     }
 }

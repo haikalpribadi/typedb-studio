@@ -31,7 +31,13 @@ class Scope private constructor(
     val children: MutableList<Scope> = mutableListOf()
 ) {
 
-    private val fullName: String get() = (parent?.let { it.fullName + "." } ?: "") + name
+    private val fullName: String get() {
+        return (parent?.let { if (it.name != "global") it.fullName + "." else "" } ?: "") + name
+    }
+
+    override fun toString(): String {
+        return fullName
+    }
 
     init {
         parent?.children?.add(this)
@@ -49,6 +55,7 @@ class Scope private constructor(
             YAML.load(SCOPE_DEFINITION_FILE).asMap().content().map { entry ->
                 createScope(entry.key, globalScope, entry.value, scopes)
             }.forEach { scopes[it.fullName] = it }
+            println("Scope Definitions: $scopes")
             return scopes
         }
 
