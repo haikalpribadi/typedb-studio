@@ -59,7 +59,7 @@ sealed class ProjectItem(
     val isSymbolicLink: Boolean = path.isSymbolicLink()
     val isDirectory: Boolean = projectItemType == Type.DIRECTORY
     val isFile: Boolean = projectItemType == Type.FILE
-    val isProjectData: Boolean get() = if (name == DATA_DIR_NAME) true else parent?.isProjectData ?: false
+    val isProjectData: Boolean get() = if (this == projectMgr.dataDir) true else parent?.isProjectData ?: false
 
     abstract val isReadable: Boolean
     abstract val isWritable: Boolean

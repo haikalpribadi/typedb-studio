@@ -198,9 +198,9 @@ class File internal constructor(
         onClose = function
     }
 
-    override fun saveFile() {
+    override fun saveFile(onSuccess: ((Pageable) -> Unit)?) {
         saveContent()
-        if (isUnsavedFile) projectMgr.saveFileDialog.open(this)
+        if (isUnsavedFile) projectMgr.saveFileDialog.open(this, onSuccess)
     }
 
     fun saveContent() {
