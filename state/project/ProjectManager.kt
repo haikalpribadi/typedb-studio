@@ -41,6 +41,7 @@ import kotlin.io.path.isRegularFile
 import kotlin.io.path.isWritable
 import kotlin.io.path.name
 import kotlin.io.path.notExists
+import kotlin.io.path.relativeTo
 import mu.KotlinLogging
 
 class ProjectManager(private val settings: Settings, private val notificationMgr: NotificationManager) {
@@ -170,12 +171,12 @@ class ProjectManager(private val settings: Settings, private val notificationMgr
 
     private fun toFile(newPath: Path): File {
         assert(newPath.startsWith(current!!.path))
-        var relPath = newPath.relativize(current!!.path)
+        var relPath = newPath.relativeTo(current!!.path)
         var dir: Directory = current!!.directory
         while (relPath.nameCount > 1) {
             dir.reloadEntries()
             dir = dir.entries.first { it.name == relPath.first().name }.asDirectory()
-            relPath = relPath.relativize(relPath.first())
+            relPath = relPath.relativeTo(relPath.first())
         }
         dir.reloadEntries()
         return dir.entries.first { it.name == relPath.first().name }.asFile()
