@@ -213,7 +213,7 @@ object Form {
         trailingIcon: Icon.Code? = null,
         iconColor: Color = Theme.colors.icon,
         enabled: Boolean = true,
-        wideMode: Boolean = false,
+        fillWidth: Boolean = false,
     ) {
         BoxButton(onClick = onClick, color = bgColor, modifier = modifier, enabled = enabled) {
             Row(
@@ -222,7 +222,7 @@ object Form {
             ) {
                 @Composable
                 fun iconSpacing() {
-                    if (wideMode) Spacer(Modifier.weight(1f)) else Spacer(Modifier.width(TEXT_BUTTON_PADDING))
+                    if (fillWidth) Spacer(Modifier.weight(1f)) else Spacer(Modifier.width(TEXT_BUTTON_PADDING))
                 }
                 leadingIcon?.let {
                     Icon.Render(icon = it, color = iconColor)
@@ -495,12 +495,13 @@ object Form {
     @Composable
     fun <T : Any> Dropdown(
         values: List<T>,
-        selected: T,
+        selected: T?,
         onExpand: (() -> Unit)? = null,
         onSelection: (value: T) -> Unit,
         placeholder: String = "",
         enabled: Boolean = true,
         modifier: Modifier = Modifier,
+        wideMode: Boolean = false,
     ) {
 
         class DropdownState {
@@ -533,12 +534,12 @@ object Form {
             modifier = modifier.onSizeChanged { state.width = toDP(it.width, pixelDensity) }
         ) {
             TextButton(
-                text = selected.toString().ifBlank { placeholder },
-                textColor = fadeable(Theme.colors.onPrimary, selected.toString().isBlank()),
+                text = selected?.let { it.toString().ifBlank { placeholder } } ?: placeholder,
+                textColor = fadeable(Theme.colors.onPrimary, selected == null || selected.toString().isBlank()),
                 onClick = { state.toggle() },
                 trailingIcon = CARET_DOWN,
                 enabled = enabled,
-                wideMode = true,
+                fillWidth = wideMode,
             )
             DropdownMenu(
                 expanded = state.expanded,
@@ -559,8 +560,7 @@ object Form {
                             .pointerMoveFilter(onExit = { state.mouseOutFrom(i) }, onEnter = { state.mouseInTo(i) })
                             .pointerHoverIcon(icon = PointerIconDefaults.Hand)
                     ) {
-                        val isSelected = value == selected
-                        val color = if (isSelected) Theme.colors.secondary else Theme.colors.onSurface
+                        val color = if (value == selected) Theme.colors.secondary else Theme.colors.onSurface
                         Text(value = value.toString(), color = color)
                     }
                 }

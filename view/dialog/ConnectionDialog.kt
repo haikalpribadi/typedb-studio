@@ -133,7 +133,7 @@ object ConnectionDialog {
                 selected = ConnectServerForm.server,
                 onSelection = { ConnectServerForm.server = it },
                 enabled = GlobalState.connection.isDisconnected(),
-                modifier = Modifier.fillMaxSize()
+                wideMode = true
             )
         }
     }
@@ -277,9 +277,9 @@ object ConnectionDialog {
         Dropdown(
             modifier = modifier,
             values = GlobalState.connection.current?.databaseList ?: emptyList(),
-            selected = GlobalState.connection.current?.getDatabase() ?: "",
+            selected = GlobalState.connection.current?.getDatabase(),
             onExpand = { GlobalState.connection.current?.refreshDatabaseList() },
-            onSelection = { GlobalState.connection.current?.setDatabase(it) },
+            onSelection = { GlobalState.connection.current?.openSession(it) },
             placeholder = Label.SELECT_DATABASE,
             enabled = GlobalState.connection.isConnected()
         )

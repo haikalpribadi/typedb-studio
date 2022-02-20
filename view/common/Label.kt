@@ -73,6 +73,7 @@ object Label {
     const val SAVE_FILE = "Save File"
     const val SAVE_OR_DELETE = "Save or Delete"
     const val SELECT_DATABASE = "Select Database"
+    const val SELECT_SESSION_TYPE = "Select Session Type"
     const val SERVER = "Server"
     const val STATUS = "Status"
     const val TITLE = "Title"

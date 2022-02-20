@@ -18,8 +18,10 @@
 
 package com.vaticle.typedb.studio.view
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -29,11 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vaticle.typedb.client.api.TypeDBSession
 import com.vaticle.typedb.studio.state.GlobalState
 import com.vaticle.typedb.studio.state.connection.ConnectionManager.Status.CONNECTED
 import com.vaticle.typedb.studio.state.connection.ConnectionManager.Status.CONNECTING
 import com.vaticle.typedb.studio.state.connection.ConnectionManager.Status.DISCONNECTED
 import com.vaticle.typedb.studio.view.common.Label
+import com.vaticle.typedb.studio.view.common.component.Form
 import com.vaticle.typedb.studio.view.common.component.Form.IconButton
 import com.vaticle.typedb.studio.view.common.component.Form.TextButton
 import com.vaticle.typedb.studio.view.common.component.Icon
@@ -46,7 +50,7 @@ object Toolbar {
     private val TOOLBAR_HEIGHT = 34.dp
     private val TOOLBAR_SPACING = 5.dp
     private val BUTTON_HEIGHT = 24.dp
-    private val DATABASE_DROPDOWN_WIDTH = 120.dp
+    private val DATABASE_DROPDOWN_MIN_WIDTH = 120.dp
 
     @Composable
     fun Layout() {
@@ -55,6 +59,8 @@ object Toolbar {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Project.Buttons()
+//            Separator.Vertical()
+//            Transaction.Buttons()
             Separator.Vertical()
             Query.Buttons()
             Separator.Vertical()
@@ -107,6 +113,57 @@ object Toolbar {
         }
     }
 
+    object Transaction {
+
+        enum class SessionType {
+
+        }
+        @Composable
+        internal fun Buttons() {
+            ToolbarSpace()
+            SessionTypeButton()
+            ToolbarSpace()
+            TransactionTypeButton()
+            ToolbarSpace()
+            TransactionOptionsButtons()
+            ToolbarSpace()
+            QueryLimit()
+            ToolbarSpace()
+            QueryOffset()
+            ToolbarSpace()
+        }
+
+        @Composable
+        private fun SessionTypeButton() {
+            Form.Dropdown(
+                values = TypeDBSession.Type.values().asList(),
+                selected = GlobalState.connection.current?.session?.type(),
+                onSelection = { GlobalState.connection.current?.reopenSessionWithType(it) },
+                placeholder = Label.SELECT_SESSION_TYPE,
+                enabled = GlobalState.connection.hasSession(),
+            )
+        }
+
+        @Composable
+        private fun TransactionTypeButton() {
+
+        }
+
+        @Composable
+        private fun TransactionOptionsButtons() {
+
+        }
+
+        @Composable
+        private fun QueryLimit() {
+
+        }
+
+        @Composable
+        private fun QueryOffset() {
+
+        }
+    }
     object Query {
 
         @Composable
@@ -134,7 +191,8 @@ object Toolbar {
         @Composable
         internal fun Buttons() {
             ToolbarSpace()
-            DatabaseDropdown(Modifier.height(BUTTON_HEIGHT).width(DATABASE_DROPDOWN_WIDTH))
+//            DatabaseDropdown(Modifier.height(BUTTON_HEIGHT).defaultMinSize(minWidth = DATABASE_DROPDOWN_MIN_WIDTH))
+            DatabaseDropdown(Modifier.height(BUTTON_HEIGHT).width(DATABASE_DROPDOWN_MIN_WIDTH))
             ToolbarSpace()
             ConnectionButton()
             ToolbarSpace()
