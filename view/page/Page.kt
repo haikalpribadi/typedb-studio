@@ -31,9 +31,9 @@ abstract class Page(val state: Pageable) {
 
     companion object {
         @Composable
-        fun of(pageable: Pageable): Page {
-            return when (pageable) {
-                is File -> FilePage.create(pageable)
+        fun of(state: Pageable): Page {
+            return when (state) {
+                is File -> FilePage.create(state)
                 else -> throw IllegalStateException("should never be reached")
             }
         }
@@ -45,6 +45,7 @@ abstract class Page(val state: Pageable) {
 
     var tabSize by mutableStateOf(0.dp)
 
+    abstract fun updateState(state: Pageable)
     abstract fun resetFocus()
 
     @Composable

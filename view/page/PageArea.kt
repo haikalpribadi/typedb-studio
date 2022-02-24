@@ -217,8 +217,13 @@ object PageArea {
             Row(Modifier.widthIn(max = state.tabsRowMaxWidth).height(TAB_HEIGHT).horizontalScroll(scrollState)) {
                 GlobalState.page.openedPages.forEach { pageState ->
                     Tab(state, state.cachedOpenedPages.getOrPut(pageState) {
+                        val page = Page.of(pageState)
                         pageState.onClose { state.removeCache(pageState) }
-                        Page.of(pageState)
+                        pageState.onReopen { newPageState ->
+                            page.updateState(newPageState)
+                            state.cachedOpenedPages[newPageState] = page
+                        }
+                        return@getOrPut page
                     })
                 }
             }

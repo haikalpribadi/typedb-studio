@@ -80,6 +80,7 @@ class File internal constructor(
     private var content: List<String> by mutableStateOf(listOf())
     private var onDiskChangeContent: ((File) -> Unit)? by mutableStateOf(null)
     private var onDiskChangePermission: ((File) -> Unit)? by mutableStateOf(null)
+    private var onReopen: ((File) -> Unit)? by mutableStateOf(null)
     private var onWatch: (() -> Unit)? by mutableStateOf(null)
     private var beforeSave = LinkedBlockingDeque<() -> Unit>()
     private var beforeClose = LinkedBlockingDeque<() -> Unit>()
@@ -213,6 +214,16 @@ class File internal constructor(
         }
     }
 
+    fun setCallbacks(other: File) {
+        this.onDiskChangeContent = other.onDiskChangeContent
+        this.onDiskChangePermission = other.onDiskChangePermission
+        this.onWatch = other.onWatch
+        this.onReopen = other.onReopen
+        this.beforeSave = other.beforeSave
+        this.beforeClose = other.beforeClose
+        this.onClose = other.onClose
+    }
+
     fun onDiskChangeContent(function: (File) -> Unit) {
         onDiskChangeContent = function
     }
@@ -231,6 +242,10 @@ class File internal constructor(
 
     override fun onClose(function: () -> Unit) {
         onClose.push(function)
+    }
+
+    override fun onReopen(function: (Pageable) -> Unit) {
+        onReopen = function
     }
 
     private fun execBeforeSave() {
@@ -266,11 +281,15 @@ class File internal constructor(
         if (isUnsavedFile) projectMgr.saveFileDialog.open(this, onSuccess)
     }
 
-    fun saveContent() {
+    private fun saveContent() {
         execBeforeSave()
         Files.write(path, content)
         lastModified.set(System.currentTimeMillis())
         hasChanges = false
+    }
+
+    internal fun reopen() {
+        onReopen?.let { it(this) }
     }
 
     override fun close() {

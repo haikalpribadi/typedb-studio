@@ -41,6 +41,8 @@ interface Pageable {
 
     fun onClose(function: () -> Unit)
 
+    fun onReopen(function: (Pageable) -> Unit)
+
     fun execBeforeClose()
 
     fun rename(onSuccess: ((Pageable) -> Unit)? = null)
