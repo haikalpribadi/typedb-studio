@@ -107,6 +107,7 @@ interface KeyMapper {
         ESCAPE,
         SAVE,
         CLOSE,
+        QUIT,
 
         EMOJI_WINDOW,
     }
@@ -123,6 +124,7 @@ interface KeyMapper {
         val N: Key = Key(java.awt.event.KeyEvent.VK_N)
         val O: Key = Key(java.awt.event.KeyEvent.VK_O)
         val P: Key = Key(java.awt.event.KeyEvent.VK_P)
+        val Q: Key = Key(java.awt.event.KeyEvent.VK_Q)
         val R: Key = Key(java.awt.event.KeyEvent.VK_R)
         val S: Key = Key(java.awt.event.KeyEvent.VK_S)
         val T: Key = Key(java.awt.event.KeyEvent.VK_T)
@@ -296,6 +298,7 @@ interface KeyMapper {
                         Keys.DirectionUp -> Command.MOVE_HOME
                         Keys.DirectionDown -> Command.MOVE_END
                         Keys.Backspace -> Command.DELETE_LINE_START
+                        Keys.Q -> Command.QUIT
                         else -> null
                     }
 
