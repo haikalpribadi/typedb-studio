@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -39,10 +40,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowExceptionHandler
+import androidx.compose.ui.window.WindowExceptionHandlerFactory
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.window.singleWindowApplication
 import com.vaticle.typedb.common.collection.Either
 import com.vaticle.typedb.studio.state.GlobalState
 import com.vaticle.typedb.studio.state.common.Message
@@ -62,6 +67,8 @@ import com.vaticle.typedb.studio.view.dialog.ConnectionDialog
 import com.vaticle.typedb.studio.view.dialog.DatabaseDialog
 import com.vaticle.typedb.studio.view.dialog.ProjectDialog
 import com.vaticle.typedb.studio.view.page.PageArea
+import java.awt.Window
+import java.awt.event.WindowEvent
 import javax.swing.UIManager
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
@@ -84,10 +91,16 @@ object Studio {
             setConfigurations()
             Message.loadClasses()
             UserDataDirectory.initialise()
-            application { MainWindow(it) }
+            while (true) {
+                application { MainWindow(it) }
+                ExceptionHandler.error?.let { exception ->
+                    println("FUCK THIS SHIT")
+                    LOGGER.error(exception.message, exception)
+                    application { ErrorWindow(exception) { ExceptionHandler.clear(); it() } }
+                }
+            }
         } catch (exception: Exception) {
             LOGGER.error(exception.message, exception)
-            application { ErrorWindow(exception, it) }
         }
     }
 
@@ -105,13 +118,13 @@ object Studio {
         System.setProperty("awt.useSystemAAFontSettings", "on")
         System.setProperty("swing.aatext", "true")
         // Enable FileDialog to select "directories" on MacOS
-        System.setProperty("apple.awt.fileDialogForDirectories", "true");
+        System.setProperty("apple.awt.fileDialogForDirectories", "true")
         // Enable native Windows UI style
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()) // Set UI style for Windows
     }
 
     private fun application(window: @Composable (onExit: () -> Unit) -> Unit) {
-        androidx.compose.ui.window.application {
+        androidx.compose.ui.window.application(exitProcessOnExit = false) {
             Theme.Material {
                 // TODO: we don't want to call exitApplication() onCloseRequest for MacOS
                 window { exitApplication() }
@@ -119,60 +132,79 @@ object Studio {
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     private fun MainWindow(onClose: () -> Unit) {
-        // TODO: we want no title bar, by passing undecorated=true, but it seems to cause intermittent crashes on startup
-        //       (see #40). Test if they occur when running the distribution, or only with bazel run :studio-bin-*
-        Window(
-            title = getMainWindowTitle(),
-            onCloseRequest = { onClose() },
-            state = rememberWindowState(WindowPlacement.Maximized)
-        ) {
-            val density = LocalDensity.current.density
-            var titleBarHeight by remember { mutableStateOf(0.dp) }
-            val bgColor = Theme.colors.background1
-            CompositionLocalProvider(LocalWindow provides window) {
-                Column(Modifier.fillMaxSize().background(bgColor).onGloballyPositioned {
-                    titleBarHeight = window.height.dp - toDP(it.size.height, density)
-                }) {
-                    CompositionLocalProvider(LocalTitleBarHeight provides titleBarHeight) {
-                        Toolbar.Layout()
-                        Separator.Horizontal()
-                        Frame.Row(
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                            separator = Frame.SeparatorArgs(Separator.WEIGHT),
-                            Frame.Pane(
-                                id = BrowserArea.javaClass.name,
-                                minSize = BrowserArea.MIN_WIDTH,
-                                initSize = Either.first(BrowserArea.WIDTH)
-                            ) { BrowserArea.Layout(it) },
-                            Frame.Pane(
-                                id = PageArea.javaClass.name,
-                                minSize = PageArea.MIN_WIDTH,
-                                initSize = Either.second(1f)
-                            ) { PageArea.Layout() }
-                        )
-                        Separator.Horizontal()
-                        StatusBar.Layout()
+        CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides ExceptionHandler) {
+            // TODO: we want no title bar, by passing undecorated=true, but it seems to cause intermittent crashes on startup
+            //       (see #40). Test if they occur when running the distribution, or only with bazel run :studio-bin-*
+            Window(
+                title = getMainWindowTitle(),
+                onCloseRequest = { onClose() },
+                state = rememberWindowState(WindowPlacement.Maximized)
+            ) {
+                val density = LocalDensity.current.density
+                var titleBarHeight by remember { mutableStateOf(0.dp) }
+                val bgColor = Theme.colors.background1
+                CompositionLocalProvider(LocalWindow provides window) {
+                    Column(Modifier.fillMaxSize().background(bgColor).onGloballyPositioned {
+                        titleBarHeight = window.height.dp - toDP(it.size.height, density)
+                    }) {
+                        CompositionLocalProvider(LocalTitleBarHeight provides titleBarHeight) {
+                            Toolbar.Layout()
+                            Separator.Horizontal()
+                            Frame.Row(
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                separator = Frame.SeparatorArgs(Separator.WEIGHT),
+                                Frame.Pane(
+                                    id = BrowserArea.javaClass.name,
+                                    minSize = BrowserArea.MIN_WIDTH,
+                                    initSize = Either.first(BrowserArea.WIDTH)
+                                ) { BrowserArea.Layout(it) },
+                                Frame.Pane(
+                                    id = PageArea.javaClass.name,
+                                    minSize = PageArea.MIN_WIDTH,
+                                    initSize = Either.second(1f)
+                                ) { PageArea.Layout() }
+                            )
+                            Separator.Horizontal()
+                            StatusBar.Layout()
+                        }
                     }
+                    if (GlobalState.notification.queue.isNotEmpty()) NotificationArea.Layout()
+                    if (GlobalState.confirmation.isOpen) ConfirmationDialog.Layout()
+                    if (GlobalState.connection.connectServerDialog.isOpen) ConnectionDialog.ConnectServer()
+                    if (GlobalState.connection.manageDatabasesDialog.isOpen) DatabaseDialog.ManageDatabases()
+                    if (GlobalState.connection.selectDatabaseDialog.isOpen) DatabaseDialog.SelectDatabase()
+                    if (GlobalState.project.createItemDialog.isOpen) ProjectDialog.CreateProjectItem()
+                    if (GlobalState.project.openProjectDialog.isOpen) ProjectDialog.OpenProject()
+                    if (GlobalState.project.moveDirectoryDialog.isOpen) ProjectDialog.MoveDirectory()
+                    if (GlobalState.project.renameDirectoryDialog.isOpen) ProjectDialog.RenameDirectory()
+                    if (GlobalState.project.saveFileDialog.isOpen) ProjectDialog.SaveFile(window)
+                    if (GlobalState.project.renameFileDialog.isOpen) ProjectDialog.RenameFile()
                 }
-                if (GlobalState.notification.queue.isNotEmpty()) NotificationArea.Layout()
-                if (GlobalState.confirmation.isOpen) ConfirmationDialog.Layout()
-                if (GlobalState.connection.connectServerDialog.isOpen) ConnectionDialog.ConnectServer()
-                if (GlobalState.connection.manageDatabasesDialog.isOpen) DatabaseDialog.ManageDatabases()
-                if (GlobalState.connection.selectDatabaseDialog.isOpen) DatabaseDialog.SelectDatabase()
-                if (GlobalState.project.createItemDialog.isOpen) ProjectDialog.CreateProjectItem()
-                if (GlobalState.project.openProjectDialog.isOpen) ProjectDialog.OpenProject()
-                if (GlobalState.project.moveDirectoryDialog.isOpen) ProjectDialog.MoveDirectory()
-                if (GlobalState.project.renameDirectoryDialog.isOpen) ProjectDialog.RenameDirectory()
-                if (GlobalState.project.saveFileDialog.isOpen) ProjectDialog.SaveFile(window)
-                if (GlobalState.project.renameFileDialog.isOpen) ProjectDialog.RenameFile()
             }
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
+    object ExceptionHandler : WindowExceptionHandlerFactory {
+        var error: Throwable? by mutableStateOf(null); private set
+
+        override fun exceptionHandler(window: Window) = WindowExceptionHandler {
+            println("exception handler called")
+            error = it
+            window.dispatchEvent(WindowEvent(window, WindowEvent.WINDOW_CLOSING))
+            throw it
+        }
+
+        fun clear() {
+            error = null
+        }
+    }
+
     @Composable
-    private fun ErrorWindow(exception: Exception, onClose: () -> Unit) {
+    private fun ErrorWindow(exception: Throwable, onClose: () -> Unit) {
         Window(
             title = Label.TYPEDB_STUDIO_APPLICATION_ERROR,
             onCloseRequest = { onClose() },
