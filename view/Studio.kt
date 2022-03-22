@@ -137,11 +137,11 @@ object Studio {
         Window(
             title = getMainWindowTitle(),
             onCloseRequest = { onClose() },
-            state = rememberWindowState(WindowPlacement.Maximized)
+            state = rememberWindowState(WindowPlacement.Maximized),
+            onPreviewKeyEvent = { handleKeyEvent(it, onClose) },
         ) {
             CompositionLocalProvider(LocalWindow provides window) {
-                Column(Modifier.fillMaxSize().background(Theme.colors.background1)
-                    .onPreviewKeyEvent { handleKeyEvent(it, onClose) }) {
+                Column(Modifier.fillMaxSize().background(Theme.colors.background1)) {
                     Toolbar.Layout()
                     Separator.Horizontal()
                     Frame.Row(
