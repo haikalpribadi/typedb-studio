@@ -19,6 +19,7 @@
 package com.vaticle.typedb.studio.view.editor
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -256,9 +257,11 @@ object TextEditor {
     fun Layout(state: State, modifier: Modifier = Modifier, showLine: Boolean = true, onScroll: () -> Unit = {}) {
         if (state.content.isEmpty()) return
         val density = LocalDensity.current.density
-        val fontHeight = with(LocalDensity.current) { (state.lineHeight - LINE_GAP).toSp() * density }
+        val lineGap = LINE_GAP * GlobalState.appearance.textEditorScale
+        val lineHeight = with(LocalDensity.current) { (state.lineHeight - lineGap).toSp() * density }
         val fontColor = Theme.colors.onBackground
-        val fontStyle = state.font.copy(color = fontColor, lineHeight = fontHeight)
+        val fontSize = state.font.fontSize * GlobalState.appearance.textEditorScale
+        val fontStyle = state.font.copy(color = fontColor, fontSize = fontSize, lineHeight = lineHeight)
         var fontWidth by remember { mutableStateOf(DEFAULT_FONT_WIDTH) }
 
         Box { // We render a number to find out the default width of a digit for the given font
@@ -374,7 +377,7 @@ object TextEditor {
             }
             Text(
                 text = text, style = font,
-                modifier = Modifier.onSizeChanged { state.target.mayIncreaseTextWidth(it.width) },
+                modifier = Modifier.onSizeChanged { state.target.mayIncreaseTextWidth(it.width) }.border(1.dp, Color.Red),
                 onTextLayout = { state.rendering.set(index, it, state.processor.version) }
             )
             if (cursor.row == index) Cursor(state, text, textLayout, font, fontWidth)
