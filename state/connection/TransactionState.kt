@@ -87,6 +87,14 @@ class TransactionState constructor(
         stopSignal.set(true)
     }
 
+    fun tryOpenBackgroundTx() {
+        TODO("Not yet implemented")
+    }
+
+    fun closeBackgroundTx() {
+        TODO("Not yet implemented")
+    }
+
     private fun tryOpen() {
         if (isOpen) return
         try {
