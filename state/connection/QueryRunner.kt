@@ -28,10 +28,10 @@ import com.vaticle.typedb.client.api.concept.thing.Relation
 import com.vaticle.typedb.client.api.concept.thing.Thing
 import com.vaticle.typedb.client.api.concept.type.Type
 import com.vaticle.typedb.common.collection.Either
-import com.vaticle.typedb.studio.state.connection.QueryRunner.Response.Type.ERROR
-import com.vaticle.typedb.studio.state.connection.QueryRunner.Response.Type.INFO
-import com.vaticle.typedb.studio.state.connection.QueryRunner.Response.Type.SUCCESS
-import com.vaticle.typedb.studio.state.connection.QueryRunner.Response.Type.TYPEQL
+import com.vaticle.typedb.studio.state.connection.Response.Message.Type.ERROR
+import com.vaticle.typedb.studio.state.connection.Response.Message.Type.INFO
+import com.vaticle.typedb.studio.state.connection.Response.Message.Type.SUCCESS
+import com.vaticle.typedb.studio.state.connection.Response.Message.Type.TYPEQL
 import com.vaticle.typeql.lang.TypeQL
 import com.vaticle.typeql.lang.common.TypeQLToken.Constraint.IID
 import com.vaticle.typeql.lang.common.TypeQLToken.Constraint.ISA
@@ -72,26 +72,27 @@ class QueryRunner constructor(
         const val ERROR_ = "## Error> "
         const val RUNNING_ = "## Running> "
         const val COMPLETED = "## Completed"
-        const val DEFINE_QUERY = "Define Query:"
+        const val DEFINE_QUERY = "Define query:"
         const val DEFINE_QUERY_SUCCESS = "Define query successfully defined new types in the schema."
-        const val UNDEFINE_QUERY = "Undefine Query:"
+        const val UNDEFINE_QUERY = "Undefine query:"
         const val UNDEFINE_QUERY_SUCCESS = "Undefine query successfully undefined types in the schema."
-        const val DELETE_QUERY = "Delete Query:"
+        const val DELETE_QUERY = "Delete query:"
         const val DELETE_QUERY_SUCCESS = "Delete query successfully deleted things from the database."
-        const val INSERT_QUERY = "Insert Query:"
+        const val INSERT_QUERY = "Insert query:"
         const val INSERT_QUERY_SUCCESS = "Insert query successfully inserted new things to the database:"
         const val INSERT_QUERY_NO_RESULT = "Insert query did not insert any new thing to the database."
-        const val UPDATE_QUERY = "Update Query:"
+        const val UPDATE_QUERY = "Update query:"
         const val UPDATE_QUERY_SUCCESS = "Update query successfully updated things in the databases:"
         const val UPDATE_QUERY_NO_RESULT = "Update query did not update any thing in the databases."
-        const val MATCH_QUERY = "Match Query:"
+        const val MATCH_QUERY = "Match query:"
         const val MATCH_QUERY_SUCCESS = "Match query successfully matched concepts in the database:"
         const val MATCH_QUERY_NO_RESULT = "Match query did not match any concepts in the database."
-        const val MATCH_AGGREGATE_QUERY = "Match Aggregate Query:"
-        const val MATCH_GROUP_QUERY = "Match Group Query:"
+        const val MATCH_AGGREGATE_QUERY = "Match Aggregate query:"
+        const val MATCH_AGGREGATE_QUERY_SUCCESS = "Match Aggregate query successfully calculated:"
+        const val MATCH_GROUP_QUERY = "Match Group query:"
         const val MATCH_GROUP_QUERY_SUCCESS = "Match Group query successfully matched concept groups in the database:"
         const val MATCH_GROUP_QUERY_NO_RESULT = "Match Group query did not match any concept groups in the database."
-        const val MATCH_GROUP_AGGREGATE_QUERY = "Match Group Aggregate Query:"
+        const val MATCH_GROUP_AGGREGATE_QUERY = "Match Group Aggregate query:"
         const val MATCH_GROUP_AGGREGATE_QUERY_SUCCESS =
             "Match Group Aggregate query successfully aggregated matched concept groups in the database:"
         const val MATCH_GROUP_AGGREGATE_QUERY_NO_RESULT =
@@ -100,14 +101,7 @@ class QueryRunner constructor(
         private val RUNNING_INDICATOR_DELAY = Duration.Companion.seconds(3)
     }
 
-    object Done
-
-    data class Response(val type: Type, val text: String) {
-        enum class Type { INFO, SUCCESS, ERROR, TYPEQL }
-    }
-
-    val responses = LinkedBlockingQueue<Either<Response, Done>>()
-    val conceptMapStreams = LinkedBlockingQueue<Either<LinkedBlockingQueue<Either<ConceptMap, Done>>, Done>>()
+    val responses = LinkedBlockingQueue<Response>()
     private val isRunning = AtomicBoolean(false)
     private val lastResponse = AtomicLong(0)
     private val coroutineScope = CoroutineScope(EmptyCoroutineContext)
@@ -119,11 +113,11 @@ class QueryRunner constructor(
     }
 
     private fun collectEmptyLine() {
-        collectResponse(INFO, "")
+        collectMessage(INFO, "")
     }
 
-    private fun collectResponse(type: Response.Type, string: String) {
-        responses.put(Either.first(Response(type, string)))
+    private fun collectMessage(type: Response.Message.Type, string: String) {
+        responses.put(Response.Message(type, string))
         lastResponse.set(System.currentTimeMillis())
     }
 
@@ -134,7 +128,7 @@ class QueryRunner constructor(
             if (!isRunning.get()) break
             val sinceLastResponse = System.currentTimeMillis() - lastResponse.get()
             if (sinceLastResponse >= RUNNING_INDICATOR_DELAY.inWholeMilliseconds) {
-                collectResponse(INFO, "...")
+                collectMessage(INFO, "...")
                 duration = RUNNING_INDICATOR_DELAY
             } else {
                 duration = RUNNING_INDICATOR_DELAY - Duration.milliseconds(sinceLastResponse)
@@ -147,9 +141,9 @@ class QueryRunner constructor(
             runQueries(TypeQL.parseQueries<TypeQLQuery>(queries).toList())
         } catch (e: Exception) {
             collectEmptyLine()
-            collectResponse(ERROR, ERROR_ + e.message)
+            collectMessage(ERROR, ERROR_ + e.message)
         } finally {
-            responses.put(Either.second(Done))
+            responses.put(Response.Done)
             isRunning.set(false)
             onComplete()
         }
@@ -197,7 +191,7 @@ class QueryRunner constructor(
             successMsg = INSERT_QUERY_SUCCESS,
             noResultMsg = INSERT_QUERY_NO_RESULT,
             queryStr = query.toString(),
-            printerFn = { printConceptMap(it) },
+            collector = Response.Collector.ConceptMaps()
         ) { transaction.query().insert(query) }
     }
 
@@ -207,7 +201,7 @@ class QueryRunner constructor(
             successMsg = UPDATE_QUERY_SUCCESS,
             noResultMsg = UPDATE_QUERY_NO_RESULT,
             queryStr = query.toString(),
-            printerFn = { printConceptMap(it) }
+            collector = Response.Collector.ConceptMaps()
         ) { transaction.query().update(query) }
     }
 
@@ -217,7 +211,7 @@ class QueryRunner constructor(
             successMsg = MATCH_QUERY_SUCCESS,
             noResultMsg = MATCH_QUERY_NO_RESULT,
             queryStr = query.toString(),
-            printerFn = { printConceptMap(it) }
+            collector = Response.Collector.ConceptMaps()
         ) { transaction.query().match(query) }
     }
 
@@ -225,7 +219,8 @@ class QueryRunner constructor(
         printQueryStart(MATCH_AGGREGATE_QUERY, query.toString())
         val result = transaction.query().match(query).get()
         collectEmptyLine()
-        collectResponse(SUCCESS, RESULT_ + result)
+        collectMessage(SUCCESS, RESULT_ + MATCH_AGGREGATE_QUERY_SUCCESS)
+        responses.put(Response.Numeric(result))
     }
 
     private fun runMatchGroupQuery(query: TypeQLMatch.Group) {
@@ -234,7 +229,7 @@ class QueryRunner constructor(
             successMsg = MATCH_GROUP_QUERY_SUCCESS,
             noResultMsg = MATCH_GROUP_QUERY_NO_RESULT,
             queryStr = query.toString(),
-            printerFn = { printConceptMapGroup(it) }
+            collector = Response.Collector.ConceptMapGroups()
         ) { transaction.query().match(query) }
     }
 
@@ -244,7 +239,7 @@ class QueryRunner constructor(
             successMsg = MATCH_GROUP_AGGREGATE_QUERY_SUCCESS,
             noResultMsg = MATCH_GROUP_AGGREGATE_QUERY_NO_RESULT,
             queryStr = query.toString(),
-            printerFn = { printNumericGroup(it) }
+            collector = Response.Collector.NumericGroups()
         ) { transaction.query().match(query) }
     }
 
@@ -252,7 +247,7 @@ class QueryRunner constructor(
         printQueryStart(name, queryStr)
         queryFn()
         collectEmptyLine()
-        collectResponse(SUCCESS, RESULT_ + successMsg)
+        collectMessage(SUCCESS, RESULT_ + successMsg)
     }
 
     private fun <T : Any> runStreamingQuery(
@@ -260,42 +255,43 @@ class QueryRunner constructor(
         successMsg: String,
         noResultMsg: String,
         queryStr: String,
-        printerFn: (T) -> String,
+        collector: Response.Collector<T>,
         queryFn: () -> Stream<T>
     ) {
         printQueryStart(name, queryStr)
-        consumeResultStream(queryFn(), RESULT_ + successMsg, RESULT_ + noResultMsg, printerFn)
+        collectResultStream(queryFn(), successMsg, noResultMsg, collector)
     }
 
     private fun printQueryStart(name: String, queryStr: String) {
         collectEmptyLine()
-        collectResponse(INFO, RUNNING_ + name)
-        collectResponse(TYPEQL, queryStr)
+        collectMessage(INFO, RUNNING_ + name)
+        collectMessage(TYPEQL, queryStr)
     }
 
-    private fun <T : Any> consumeResultStream(
+    private fun <T : Any> collectResultStream(
         results: Stream<T>,
-        successMessage: String,
-        noResultMessage: String, printerFn: (T) -> String
+        successMsg: String,
+        noResultMsg: String,
+        collector: Response.Collector<T>
     ) {
         var started = false
-        val conceptMapStream = LinkedBlockingQueue<Either<ConceptMap, Done>>()
+        val conceptMapStream = LinkedBlockingQueue<Either<ConceptMap, Response.Done>>()
         collectEmptyLine()
         results.peek {
             if (started) return@peek
-            if (it is ConceptMap) conceptMapStreams.put(Either.first(conceptMapStream))
-            collectResponse(SUCCESS, successMessage)
+            collectMessage(SUCCESS, RESULT_ + successMsg)
             started = true
         }.forEach {
             if (hasStopSignal.get()) return@forEach
-            collectResponse(TYPEQL, printerFn(it))
+            collector.queue.put(Either.first(it))
             if (it is ConceptMap) conceptMapStream.put(Either.first(it))
         }
         if (started) {
             collectEmptyLine()
-            collectResponse(SUCCESS, COMPLETED)
-            conceptMapStream.put(Either.second(Done))
-        } else collectResponse(SUCCESS, noResultMessage)
+            collector.queue.put(Either.second(Response.Done))
+            responses.put(collector)
+            collectMessage(SUCCESS, COMPLETED)
+        } else collectMessage(SUCCESS, RESULT_ + noResultMsg)
     }
 
     private fun printNumericGroup(group: NumericGroup): String {
