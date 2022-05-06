@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -46,8 +47,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vaticle.typedb.common.collection.Either
 import com.vaticle.typedb.studio.state.GlobalState
 import com.vaticle.typedb.studio.state.resource.Resource
 import com.vaticle.typedb.studio.state.schema.TypeState
@@ -58,6 +61,7 @@ import com.vaticle.typedb.studio.view.common.component.Form
 import com.vaticle.typedb.studio.view.common.component.Icon
 import com.vaticle.typedb.studio.view.common.component.Scrollbar
 import com.vaticle.typedb.studio.view.common.component.Separator
+import com.vaticle.typedb.studio.view.common.component.Table
 import com.vaticle.typedb.studio.view.common.component.Tooltip
 import com.vaticle.typedb.studio.view.common.theme.Theme
 
@@ -77,6 +81,7 @@ class TypePage constructor(private var type: TypeState) : Page(type) {
         private val PAGE_PADDING = 40.dp
         private val HORIZONTAL_SPACING = 6.dp
         private val VERTICAL_SPACING = 18.dp
+        private val ICON_COL_WIDTH = 24.dp
     }
 
     override fun updateResourceInner(resource: Resource) {
@@ -212,6 +217,27 @@ class TypePage constructor(private var type: TypeState) : Page(type) {
             Form.Text(value = Label.OWNED_ATTRIBUTES)
             Separator.Horizontal(modifier = Modifier.weight(1f))
         }
+        val smallColWidth = Either.first<Dp, Float>(ICON_COL_WIDTH)
+        val textColWeight = Either.second<Dp, Float>(1f)
+        Table.Layout(
+            items = type.ownedAttributes.values.sortedBy { it.attributeType.name },
+            modifier = Modifier.fillMaxWidth().height(Table.ROW_HEIGHT * type.ownedAttributes.size),
+            headers = listOf(Label.ATTRIBUTES, Label.OVERRIDES, Label.KEY, Label.INHERITED, null).map { it?.let { AnnotatedString(it) } },
+            colWeights = listOf(textColWeight, textColWeight, smallColWidth, smallColWidth, smallColWidth),
+            cellFns = listOf(
+                { Form.Text(value = it.attributeType.name) },
+                { it.overridden?.name?.let { overridden -> Form.Text(overridden) } },
+                {
+
+                },
+                {
+
+                },
+                {
+
+                },
+            )
+        )
     }
 
     @Composable
