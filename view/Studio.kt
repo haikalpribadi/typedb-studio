@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
-import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.WindowExceptionHandlerFactory
 import androidx.compose.ui.window.WindowPlacement
@@ -66,6 +65,7 @@ import com.vaticle.typedb.studio.view.common.Sentence
 import com.vaticle.typedb.studio.view.common.Util.toDP
 import com.vaticle.typedb.studio.view.common.theme.Theme
 import com.vaticle.typedb.studio.view.common.theme.Theme.DIALOG_PADDING
+import com.vaticle.typedb.studio.view.compose.Window
 import com.vaticle.typedb.studio.view.connection.DatabaseDialog
 import com.vaticle.typedb.studio.view.connection.ServerDialog
 import com.vaticle.typedb.studio.view.material.ConfirmationDialog
