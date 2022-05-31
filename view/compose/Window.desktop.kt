@@ -148,6 +148,7 @@ fun Window(
     val currentFocusable by rememberUpdatedState(focusable)
     val currentAlwaysOnTop by rememberUpdatedState(alwaysOnTop)
     val currentOnCloseRequest by rememberUpdatedState(onCloseRequest)
+    val graphicsConfiguration = remember { Window.getWindows().find { it.isActive }?.graphicsConfiguration }
 
     val updater = remember(::ComponentUpdater)
 
@@ -166,7 +167,7 @@ fun Window(
         onPreviewKeyEvent = onPreviewKeyEvent,
         onKeyEvent = onKeyEvent,
         create = {
-            ComposeWindow().apply {
+            ComposeWindow(graphicsConfiguration).apply {
                 // close state is controlled by WindowState.isOpen
                 defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
                 addWindowListener(object : WindowAdapter() {
