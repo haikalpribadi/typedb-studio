@@ -107,10 +107,7 @@ class File internal constructor(
     }
 
     val extension: String = this.path.extension
-    val fileType: FileType = when {
-        TYPEQL.extensions.contains(extension) -> TYPEQL
-        else -> UNKNOWN
-    }
+    val fileType: FileType = FileType.of(extension)
     val isTypeQL: Boolean = fileType == TYPEQL
     val isTextFile: Boolean = checkIsTextFile()
 
@@ -128,7 +125,7 @@ class File internal constructor(
     }
     override var runner: RunnerManager = RunnerManager()
     override val isOpen: Boolean get() = isOpenAtomic.get()
-    override val isRunnable: Boolean = isTypeQL
+    override val isRunnable: Boolean = fileType.isRunnable
     override val isEmpty: Boolean get() = content.size == 1 && content[0].isBlank()
     override val isUnsavedResource: Boolean get() = parent == projectMgr.unsavedFilesDir
     override var hasUnsavedChanges: Boolean by mutableStateOf(false)

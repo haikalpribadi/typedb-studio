@@ -21,9 +21,11 @@ package com.vaticle.typedb.studio.state.project
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.vaticle.typedb.studio.state.app.ConfirmationManager
 import com.vaticle.typedb.studio.state.app.DialogManager
 import com.vaticle.typedb.studio.state.app.NotificationManager
 import com.vaticle.typedb.studio.state.app.NotificationManager.Companion.launchAndHandle
+import com.vaticle.typedb.studio.state.common.util.Label
 import com.vaticle.typedb.studio.state.common.util.Message.Project.Companion.DIRECTORY_HAS_BEEN_MOVED_OUT
 import com.vaticle.typedb.studio.state.common.util.Message.Project.Companion.FAILED_TO_CREATE_FILE
 import com.vaticle.typedb.studio.state.common.util.Message.Project.Companion.FILE_HAS_BEEN_MOVED_OUT
@@ -32,6 +34,8 @@ import com.vaticle.typedb.studio.state.common.util.Message.Project.Companion.PAT
 import com.vaticle.typedb.studio.state.common.util.Message.Project.Companion.PATH_NOT_READABLE
 import com.vaticle.typedb.studio.state.common.util.Message.Project.Companion.PATH_NOT_WRITABLE
 import com.vaticle.typedb.studio.state.common.util.Message.Project.Companion.PROJECT_DATA_DIR_PATH_TAKEN
+import com.vaticle.typedb.studio.state.common.util.Property
+import com.vaticle.typedb.studio.state.common.util.Sentence
 import com.vaticle.typedb.studio.state.common.util.Settings
 import com.vaticle.typedb.studio.state.resource.Resource
 import java.nio.file.Path
@@ -46,7 +50,11 @@ import kotlin.io.path.notExists
 import kotlinx.coroutines.CoroutineScope
 import mu.KotlinLogging
 
-class ProjectManager constructor(private val settings: Settings, private val notificationMgr: NotificationManager) {
+class ProjectManager(
+    private val settings: Settings,
+    private val confirmationMgr: ConfirmationManager,
+    private val notificationMgr: NotificationManager
+) {
 
     class CreateItemDialog : DialogManager() {
 
@@ -193,21 +201,42 @@ class ProjectManager constructor(private val settings: Settings, private val not
     }
 
     fun tryRenameFile(file: File, newName: String) = coroutineScope.launchAndHandle(notificationMgr, LOGGER) {
-        file.tryRename(newName)?.let {
-            renameFileDialog.onSuccess?.let { fn -> fn(it.asFile()) }
-            renameFileDialog.close()
-            onContentChange?.let { fn -> fn() }
+        mayConfirmNonRunnableFileType(file, file.path.resolveSibling(newName)) {
+            file.tryRename(newName)?.let {
+                renameFileDialog.onSuccess?.let { fn -> fn(it.asFile()) }
+                renameFileDialog.close()
+                onContentChange?.let { fn -> fn() }
+            }
         }
     }
 
     fun trySaveFileTo(file: File, newPath: Path, overwrite: Boolean) {
-        file.trySaveTo(newPath, overwrite)?.let { newFile ->
-            saveFileDialog.onSuccess?.let { it(newFile) }
-            saveFileDialog.close()
-            onContentChange?.let { it() }
-        } ?: if (!newPath.startsWith(current!!.path)) {
-            notificationMgr.userWarning(LOGGER, FILE_HAS_BEEN_MOVED_OUT, newPath)
+        mayConfirmNonRunnableFileType(file, newPath) {
+            file.trySaveTo(newPath, overwrite)?.let { newFile ->
+                saveFileDialog.onSuccess?.let { it(newFile) }
+                saveFileDialog.close()
+                onContentChange?.let { it() }
+            } ?: if (!newPath.startsWith(current!!.path)) {
+                notificationMgr.userWarning(LOGGER, FILE_HAS_BEEN_MOVED_OUT, newPath)
+            }
         }
+    }
+
+    private fun mayConfirmNonRunnableFileType(
+        currentFile: File,
+        newPath: Path,
+        operation: () -> Unit
+    ) {
+        if (currentFile.isRunnable && !Property.FileType.of(newPath).isRunnable) {
+            confirmationMgr.submit(
+                title = Label.CONVERT_FILE_TYPE,
+                message = Sentence.CONFIRM_FILE_TYPE_CHANGE_NON_RUNNABLE.format(
+                    currentFile.name, newPath.fileName,
+                    Property.FileType.RUNNABLE_EXTENSIONS.map { ".$it" }.joinToString(", ")
+                ),
+                onConfirm = operation
+            )
+        } else operation()
     }
 
     fun tryMoveDirectory(directory: Directory, newParent: Path) {
