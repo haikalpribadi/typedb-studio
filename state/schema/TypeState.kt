@@ -28,6 +28,7 @@ import com.vaticle.typedb.client.api.concept.type.RoleType
 import com.vaticle.typedb.client.api.concept.type.ThingType
 import com.vaticle.typedb.client.api.concept.type.Type
 import com.vaticle.typedb.client.common.exception.TypeDBClientException
+import com.vaticle.typedb.studio.state.app.DialogManager
 import com.vaticle.typedb.studio.state.app.NotificationManager.Companion.launchAndHandle
 import com.vaticle.typedb.studio.state.common.util.Message.Schema.Companion.FAILED_TO_DELETE_TYPE
 import com.vaticle.typedb.studio.state.common.util.Message.Schema.Companion.FAILED_TO_LOAD_TYPE
@@ -36,6 +37,7 @@ import com.vaticle.typedb.studio.state.resource.Resource
 import com.vaticle.typeql.lang.common.TypeQLToken
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.stream.Stream
 import kotlin.streams.toList
 import mu.KotlinLogging
 
@@ -76,14 +78,16 @@ sealed class TypeState private constructor(hasSubtypes: Boolean, val schemaMgr: 
     abstract fun loadOtherProperties()
     abstract override fun toString(): String
 
-    fun loadProperties() = schemaMgr.coroutineScope.launchAndHandle(schemaMgr.notificationMgr, LOGGER) {
-        try {
-            loadSupertypes()
-            loadAbstract()
-            loadOtherProperties()
-            loadSubtypesRecursivelyBlocking()
-        } catch (e: TypeDBClientException) {
-            schemaMgr.notificationMgr.userError(LOGGER, FAILED_TO_LOAD_TYPE, e.message ?: "Unknown")
+    fun loadProperties() {
+        schemaMgr.coroutineScope.launchAndHandle(schemaMgr.notificationMgr, LOGGER) {
+            try {
+                loadSupertypes()
+                loadAbstract()
+                loadOtherProperties()
+                loadSubtypesRecursivelyBlocking()
+            } catch (e: TypeDBClientException) {
+                schemaMgr.notificationMgr.userError(LOGGER, FAILED_TO_LOAD_TYPE, e.message ?: "Unknown")
+            }
         }
     }
 
@@ -165,6 +169,8 @@ sealed class TypeState private constructor(hasSubtypes: Boolean, val schemaMgr: 
         private val isOpenAtomic = AtomicBoolean(false)
         private val callbacks = Callbacks()
 
+        var hasInstances: Boolean by mutableStateOf(false)
+
         private fun computeWindowTitle(): String {
             val props = listOf(baseType.name.lowercase()) + info?.let { listOf(it) }
             return "$name (" + props.joinToString(", ") + ") @ " + schemaMgr.database
@@ -176,11 +182,13 @@ sealed class TypeState private constructor(hasSubtypes: Boolean, val schemaMgr: 
         override fun beforeClose(function: (Resource) -> Unit) {}
         override fun execBeforeClose() {}
         override fun initiateSave(isMove: Boolean, reopen: Boolean) {}
-        override fun initiateRename() {} // TODO
+        override fun activate() = loadProperties()
         override fun reloadEntries() = loadSubtypesExplicit()
         override fun onReopen(function: (Resource) -> Unit) = callbacks.onReopen.put(function)
         override fun onClose(function: (Resource) -> Unit) = callbacks.onClose.put(function)
         override fun compareTo(other: Navigable<Thing>): Int = name.compareTo(other.name)
+
+        abstract fun instances() : Stream<out com.vaticle.typedb.client.api.concept.thing.Thing>
 
         override fun tryOpen(): Boolean {
             isOpenAtomic.set(true)
@@ -188,8 +196,12 @@ sealed class TypeState private constructor(hasSubtypes: Boolean, val schemaMgr: 
             return true
         }
 
-        override fun activate() {
-            loadProperties()
+        override fun initiateRename() {
+            // TODO
+        }
+
+        fun initiateChangeSupertype() {
+            // TODO
         }
 
         override fun close() {
@@ -214,8 +226,13 @@ sealed class TypeState private constructor(hasSubtypes: Boolean, val schemaMgr: 
         }
 
         override fun loadOtherProperties() {
+            loadHasInstances()
             loadOwnsAttributeTypes()
             loadPlaysRoleTypes()
+        }
+
+        private fun loadHasInstances() {
+            hasInstances = instances().findFirst().isPresent
         }
 
         private fun loadOwnsAttributeTypes() {
@@ -307,6 +324,10 @@ sealed class TypeState private constructor(hasSubtypes: Boolean, val schemaMgr: 
         override var subtypesExplicit: List<Entity> by mutableStateOf(listOf())
         override val subtypes: List<Entity> get() = subtypesExplicit.map { listOf(it) + it.subtypes }.flatten()
 
+        override fun instances(): Stream<out com.vaticle.typedb.client.api.concept.thing.Entity> {
+            return conceptType.asRemote(schemaMgr.openOrGetReadTx()).instances
+        }
+
         override fun updateSubtypes(newSubtypes: List<TypeState>) {
             subtypesExplicit = newSubtypes.map { it as Entity }
         }
@@ -345,6 +366,10 @@ sealed class TypeState private constructor(hasSubtypes: Boolean, val schemaMgr: 
         val isKeyable: Boolean get() = conceptType.valueType.isKeyable
         var ownerTypeProperties: Map<ThingType, OwnerTypeProperties> by mutableStateOf(mapOf())
         val ownerTypes get() = ownerTypeProperties.values.map { it.ownerType }
+
+        override fun instances(): Stream<out com.vaticle.typedb.client.api.concept.thing.Attribute<*>> {
+            return conceptType.asRemote(schemaMgr.openOrGetReadTx()).instances
+        }
 
         override fun updateSubtypes(newSubtypes: List<TypeState>) {
             subtypesExplicit = newSubtypes.map { it as Attribute }
@@ -408,6 +433,10 @@ sealed class TypeState private constructor(hasSubtypes: Boolean, val schemaMgr: 
         override val subtypes: List<Relation> get() = subtypesExplicit.map { listOf(it) + it.subtypes }.flatten()
         var relatesRoleTypeProperties: List<RoleTypeProperties> by mutableStateOf(emptyList())
         val relatesRoleTypes: List<Role> get() = relatesRoleTypeProperties.map { it.roleType }
+
+        override fun instances(): Stream<out com.vaticle.typedb.client.api.concept.thing.Relation> {
+            return conceptType.asRemote(schemaMgr.openOrGetReadTx()).instances
+        }
 
         override fun updateSubtypes(newSubtypes: List<TypeState>) {
             subtypesExplicit = newSubtypes.map { it as Relation }

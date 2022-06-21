@@ -80,6 +80,7 @@ import com.vaticle.typedb.studio.view.material.Separator
 import com.vaticle.typedb.studio.view.project.ProjectBrowser
 import com.vaticle.typedb.studio.view.project.ProjectDialog
 import com.vaticle.typedb.studio.view.type.TypeBrowser
+import com.vaticle.typedb.studio.view.type.TypeDialog
 import java.awt.Window
 import java.awt.event.WindowEvent
 import javax.swing.UIManager
@@ -165,6 +166,7 @@ object Studio {
                 ServerDialog.MayShowDialogs()
                 DatabaseDialog.MayShowDialogs()
                 ProjectDialog.MayShowDialogs(window)
+                TypeDialog.MayShowDialogs()
             }
         }
     }

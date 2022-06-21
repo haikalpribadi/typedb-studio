@@ -28,6 +28,7 @@ import com.vaticle.typedb.client.api.concept.type.RelationType
 import com.vaticle.typedb.client.api.concept.type.RoleType
 import com.vaticle.typedb.client.api.concept.type.ThingType
 import com.vaticle.typedb.client.api.concept.type.Type
+import com.vaticle.typedb.studio.state.app.DialogManager
 import com.vaticle.typedb.studio.state.app.NotificationManager
 import com.vaticle.typedb.studio.state.app.NotificationManager.Companion.launchAndHandle
 import com.vaticle.typedb.studio.state.common.atomic.AtomicBooleanState
@@ -50,6 +51,21 @@ class SchemaManager(
     internal val notificationMgr: NotificationManager
 ) : Navigable<TypeState.Thing> {
 
+    class TypeDialogManager: DialogManager() {
+
+        var type: TypeState.Thing? by mutableStateOf(null)
+
+        fun open(type: TypeState.Thing) {
+            this.type = type
+            isOpen = true
+        }
+
+        override fun close() {
+            isOpen = false
+            type = null
+        }
+    }
+
     override val name: String = TypeQLToken.Type.THING.name.lowercase()
     override val parent: TypeState.Thing? = null
     override val info: String? = null
@@ -62,8 +78,11 @@ class SchemaManager(
     var rootEntityType: TypeState.Entity? by mutableStateOf(null); private set
     var rootRelationType: TypeState.Relation? by mutableStateOf(null); private set
     var rootAttributeType: TypeState.Attribute? by mutableStateOf(null); private set
-    var onRootsUpdated: (() -> Unit)? = null
+    var onTypesChange: (() -> Unit)? = null
     val hasWriteTx: Boolean get() = session.isSchema && session.transaction.isWrite
+    val editLabelDialog = TypeDialogManager()
+    val editSupertypeDialog = TypeDialogManager()
+    val editAbstractDialog = TypeDialogManager()
     private var readTx: AtomicReference<TypeDBTransaction> = AtomicReference()
     private val lastTransactionUse = AtomicLong(0)
     private val entityTypes = ConcurrentHashMap<EntityType, TypeState.Entity>()
@@ -162,8 +181,12 @@ class SchemaManager(
         rootAttributeType = TypeState.Attribute(
             conceptType = conceptMgr.rootAttributeType, supertype = null, hasSubtypes = true, schemaMgr = this
         ).also { attributeTypes[conceptMgr.rootAttributeType] = it }
-        onRootsUpdated?.let { it() }
+        onTypesChange?.let { it() }
         isOpenAtomic.set(true)
+    }
+
+    fun tryRename(type: TypeState.Thing, newLabel: String) {
+        type.rename(newLabel)
     }
 
     fun exportTypeSchema(onSuccess: (String) -> Unit) =

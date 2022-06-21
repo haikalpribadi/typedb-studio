@@ -263,6 +263,7 @@ object ProjectDialog {
             ProjectItemForm(
                 initField = file.name,
                 onCancel = { dialogState.close() },
+//                onSubmit = { file.tryRename(it) }
                 onSubmit = { GlobalState.project.tryRenameFile(file, it) }
             )
         }

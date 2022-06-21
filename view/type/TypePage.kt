@@ -52,10 +52,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vaticle.typedb.common.collection.Either
 import com.vaticle.typedb.studio.state.GlobalState
+import com.vaticle.typedb.studio.state.app.DialogManager
 import com.vaticle.typedb.studio.state.common.util.Label
 import com.vaticle.typedb.studio.state.common.util.Sentence
 import com.vaticle.typedb.studio.state.resource.Resource
@@ -63,7 +65,7 @@ import com.vaticle.typedb.studio.state.schema.TypeState
 import com.vaticle.typedb.studio.view.common.Util.toDP
 import com.vaticle.typedb.studio.view.common.theme.Color.FADED_OPACITY
 import com.vaticle.typedb.studio.view.common.theme.Theme
-import com.vaticle.typedb.studio.view.concept.Concept.ConceptSummaryText
+import com.vaticle.typedb.studio.view.concept.Concept.TypeDislayName
 import com.vaticle.typedb.studio.view.concept.Concept.conceptIcon
 import com.vaticle.typedb.studio.view.material.Form
 import com.vaticle.typedb.studio.view.material.Form.ClickableText
@@ -86,15 +88,12 @@ sealed class TypePage(
     override val icon: Form.IconArg = conceptIcon(type.conceptType)
     protected abstract val type: TypeState.Thing
 
+    protected val isEditable get() = type.schemaMgr.hasWriteTx && !type.isRoot && !GlobalState.client.hasRunningCommand
     private val focusReq = FocusRequester()
     private val horScroller = ScrollState(0)
     private val verScroller = ScrollState(0)
     private var width: Dp by mutableStateOf(0.dp)
-    protected val isEditable get() = false // TODO: type.schemaMgr.hasWriteTx && !type.isRoot && !GlobalState.client.hasRunningCommand
     private var showAdvanced by mutableStateOf(showAdvanced)
-    private var showEditLabelDialog by mutableStateOf(false)
-    private var showEditSupertypeDialog by mutableStateOf(false)
-    private var showEditAbstractDialog by mutableStateOf(false)
     private val subtypesNavState = Navigator.NavigatorState(
         container = type,
         title = Label.SUBTYPES_OF + " " + type.name,
@@ -141,25 +140,7 @@ sealed class TypePage(
             Scrollbar.Vertical(rememberScrollbarAdapter(verScroller), Modifier.align(Alignment.CenterEnd))
             Scrollbar.Horizontal(rememberScrollbarAdapter(horScroller), Modifier.align(Alignment.BottomCenter))
         }
-        if (showEditLabelDialog) EditLabelDialog()
-        if (showEditSupertypeDialog) EditSupertypeDialog()
-        if (showEditAbstractDialog) EditAbstractDialog()
         LaunchedEffect(focusReq) { focusReq.requestFocus() }
-    }
-
-    @Composable
-    private fun EditLabelDialog() {
-
-    }
-
-    @Composable
-    private fun EditSupertypeDialog() {
-
-    }
-
-    @Composable
-    private fun EditAbstractDialog() {
-
     }
 
     @Composable
@@ -192,7 +173,7 @@ sealed class TypePage(
         val borderColor = if (!showAdvanced) Theme.studio.border.copy(alpha = FADED_OPACITY)
         else Theme.studio.warningStroke.copy(alpha = FADED_OPACITY / 3)
         val modifier = if (!showAdvanced) Modifier
-        else Modifier.background(Theme.studio.warningBackground.copy(alpha = FADED_OPACITY / 5))
+        else Modifier.background(Theme.studio.warningBackground.copy(alpha = FADED_OPACITY / 4))
         SectionColumn(modifier) {
             Separator(borderColor)
             SectionRow {
@@ -225,24 +206,30 @@ sealed class TypePage(
     @Composable
     private fun LabelSection() {
         SectionRow {
-            Form.TextBox(text = ConceptSummaryText(type.conceptType), leadingIcon = conceptIcon(type.conceptType))
-            EditButton { } // TODO
+            Form.TextBox(text = TypeDislayName(type.conceptType), leadingIcon = conceptIcon(type.conceptType))
+            EditButton(
+                enabled = !type.isRoot,
+                tooltip = Tooltip.Arg(Label.RENAME, Sentence.EDITING_TYPES_REQUIREMENT_DESCRIPTION)
+            ) { type.initiateRename() }
             Spacer(Modifier.weight(1f))
         }
     }
 
     @Composable
     private fun SupertypeSection() {
-        val supertype = type.supertype ?: type
+        val supertype = type.supertype
         SectionRow {
             Form.Text(value = Label.SUPERTYPE)
             Spacer(Modifier.weight(1f))
             Form.TextButton(
-                text = ConceptSummaryText(supertype.conceptType),
-                leadingIcon = conceptIcon(supertype.conceptType),
+                text = supertype?.let{TypeDislayName(it.conceptType)} ?: AnnotatedString("(${Label.THING.lowercase()})"),
+                leadingIcon = supertype?.let { conceptIcon(it.conceptType) },
+                enabled = supertype != null,
+            ) { supertype?.let { GlobalState.resource.tryOpen(it) } }
+            EditButton(
                 enabled = !type.isRoot,
-            ) { GlobalState.resource.tryOpen(supertype) }
-            EditButton { } // TODO
+                tooltip = Tooltip.Arg(Label.RENAME, Sentence.EDITING_TYPES_REQUIREMENT_DESCRIPTION)
+            ) { type.initiateChangeSupertype() }
         }
     }
 
@@ -252,7 +239,10 @@ sealed class TypePage(
             Form.Text(value = Label.ABSTRACT)
             Spacer(Modifier.weight(1f))
             Form.TextBox(((if (type.isAbstract) "" else Label.NOT + " ") + Label.ABSTRACT).lowercase())
-            EditButton { } // TODO
+            EditButton(
+                enabled = !type.isRoot && !type.hasInstances,
+                tooltip = Tooltip.Arg(Label.RENAME, Sentence.EDITING_TYPES_REQUIREMENT_DESCRIPTION)
+            ) { } // TODO
         }
     }
 
@@ -272,13 +262,13 @@ sealed class TypePage(
                 modifier = Modifier.border(1.dp, Theme.studio.border).weight(1f).height(tableHeight),
                 columns = listOf(
                     Table.Column(header = Label.ATTRIBUTE_TYPES, contentAlignment = Alignment.CenterStart) { props ->
-                        ClickableText(ConceptSummaryText(props.attributeType.conceptType)) {
+                        ClickableText(TypeDislayName(props.attributeType.conceptType)) {
                             GlobalState.resource.tryOpen(props.attributeType)
                         }
                     },
                     Table.Column(header = Label.OVERRIDDEN, contentAlignment = Alignment.CenterStart) { props ->
                         props.overriddenType?.let { ot ->
-                            ClickableText(ConceptSummaryText(ot.conceptType)) {
+                            ClickableText(TypeDislayName(ot.conceptType)) {
                                 GlobalState.resource.tryOpen(ot)
                             }
                         }
@@ -322,7 +312,7 @@ sealed class TypePage(
                     placeholder = Label.SELECT_ATTRIBUTE_TYPE,
                     onExpand = { GlobalState.schema.rootAttributeType?.loadSubtypesRecursively() },
                     onSelection = { attributeType = it; it.loadProperties() },
-                    displayFn = { ConceptSummaryText(it.conceptType) },
+                    displayFn = { TypeDislayName(it.conceptType) },
                     modifier = Modifier.fillMaxSize(),
                     enabled = isEditable,
                     values = attributeTypeList
@@ -334,7 +324,7 @@ sealed class TypePage(
                     selected = overriddenType,
                     placeholder = Label.SELECT_OVERRIDDEN_TYPE_OPTIONAL,
                     onSelection = { overriddenType = it },
-                    displayFn = { ConceptSummaryText(it.conceptType) },
+                    displayFn = { TypeDislayName(it.conceptType) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = isOverridable,
                     values = overridableTypeList
@@ -420,7 +410,7 @@ sealed class TypePage(
                     placeholder = Label.SELECT_ROLE_TYPE,
                     onExpand = { GlobalState.schema.rootRelationType?.loadRelatesRoleTypeRecursively() },
                     onSelection = { roleType = it; it.loadProperties() },
-                    displayFn = { ConceptSummaryText(it.conceptType) },
+                    displayFn = { TypeDislayName(it.conceptType) },
                     modifier = Modifier.fillMaxSize(),
                     enabled = isEditable,
                     values = roleTypeList
@@ -432,7 +422,7 @@ sealed class TypePage(
                     selected = overriddenType,
                     placeholder = Label.SELECT_OVERRIDDEN_TYPE_OPTIONAL,
                     onSelection = { overriddenType = it },
-                    displayFn = { ConceptSummaryText(it.conceptType) },
+                    displayFn = { TypeDislayName(it.conceptType) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = isOverridable,
                     values = overridableTypeList
@@ -531,11 +521,11 @@ sealed class TypePage(
     }
 
     @Composable
-    protected fun EditButton(onClick: () -> Unit) {
+    protected fun EditButton(enabled: Boolean = true, tooltip: Tooltip.Arg? = null, onClick: () -> Unit) {
         Form.IconButton(
             icon = Icon.Code.PEN,
-            enabled = isEditable,
-            tooltip = Tooltip.Arg(Label.RENAME, Sentence.EDITING_TYPES_REQUIREMENT_DESCRIPTION),
+            enabled = isEditable && enabled,
+            tooltip = tooltip,
             onClick = onClick
         )
     }
@@ -611,7 +601,7 @@ sealed class TypePage(
                         selected = overriddenType,
                         placeholder = Label.SELECT_OVERRIDDEN_TYPE_OPTIONAL,
                         onSelection = { overriddenType = it },
-                        displayFn = { ConceptSummaryText(it.conceptType) },
+                        displayFn = { TypeDislayName(it.conceptType) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = isOverridable,
                         values = overridableTypeList
@@ -657,7 +647,7 @@ sealed class TypePage(
                     modifier = Modifier.border(1.dp, Theme.studio.border).weight(1f).height(tableHeight),
                     columns = listOf(
                         Table.Column(header = Label.THING_TYPES, contentAlignment = Alignment.CenterStart) { props ->
-                            ClickableText(ConceptSummaryText(props.ownerType.conceptType)) {
+                            ClickableText(TypeDislayName(props.ownerType.conceptType)) {
                                 GlobalState.resource.tryOpen(
                                     props.ownerType
                                 )

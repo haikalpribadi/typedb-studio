@@ -55,6 +55,7 @@ object Icon {
         ALIGN_LEFT(0xf036u),
         ARROW_DOWN_TO_LINE(0xf33du),
         ARROW_UP_RIGHT_FROM_SQUARE(0xf08eu),
+        ARROW_UP_SMALL_BIG(0xf88fu),
         ARROW_UP_TO_LINE(0xf341u),
         ARROW_POINTER(0xf245u),
         ARROWS_MAXIMIZE(0xf31du),

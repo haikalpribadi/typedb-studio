@@ -32,14 +32,14 @@ object Sentence {
         "This button will only be enabled when there is an open session to a database, and the transaction type is 'read'."
     private const val BUTTON_ENABLED_WHEN_TRANSACTION_IS_WRITE =
         "This button will only be enabled when there is an open session to a database, and the transaction type is 'write'."
+    private const val CHANGES_NOT_PERSISTED_TILL_COMMIT =
+        "Changes will not be persisted until you commit your transaction."
     private const val RUNNABLE_FILE_EXTENSIONS = "Runnable files are those with the extensions: %s."
     const val BUTTON_ENABLED_WHEN_RUNNING =
         "This button will only be enabled when there is a running query."
     const val BUTTON_ENABLED_WHEN_RUNNABLE =
         "This button will only be enabled when a session is opened to a database, and runnable file is opened and active " +
                 "while no other query is running. " + RUNNABLE_FILE_EXTENSIONS
-    const val CANNOT_BE_UNDONE =
-        "This action cannot be undone."
     const val CONFIRM_DATABASE_DELETION =
         "Are you sure you would like to delete the database '%s' and all of its content? $ACTION_CANNOT_BE_UNDONE " +
                 "Enter the database name below in order to confirm its deletion."
@@ -53,6 +53,8 @@ object Sentence {
                 " Are you sure you want to proceed?"
     const val CONFIRM_QUITING_APPLICATION = "Are you sure you want to close TypeDB Studio? " +
             "Unsaved files will still be available when you reopen."
+    const val CONFIRM_TYPE_DELETION =
+        "Are you sure you want to delete this type from your database schema? $CHANGES_NOT_PERSISTED_TILL_COMMIT"
     const val CREATE_DATABASE_BUTTON_DESCRIPTION =
         "Create a new database on your TypeDB Server. This button will only be enabled the provided name is valid, " +
                 "i.e. valid syntax and does not already exist."
@@ -62,6 +64,7 @@ object Sentence {
         "Create a new file under %s."
     const val EDITING_TYPES_REQUIREMENT_DESCRIPTION =
         "Functionalities for editing schema types are under development and COMING SOON."
+
     //TODO: "To edit types in the schema, you need to have a 'schema' session and a 'write' transaction'."
     const val ENABLE_INFERENCE_DESCRIPTION =
         "Enabling inference means that you will get inferred answers in your match query. " +

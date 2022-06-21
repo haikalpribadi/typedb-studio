@@ -40,7 +40,7 @@ import com.vaticle.typedb.common.collection.Either
 import com.vaticle.typedb.studio.state.common.util.Label
 import com.vaticle.typedb.studio.view.concept.Concept.conceptIcon
 import com.vaticle.typedb.studio.view.common.theme.Theme
-import com.vaticle.typedb.studio.view.concept.Concept.ConceptSummaryText
+import com.vaticle.typedb.studio.view.concept.Concept.TypeDislayName
 import com.vaticle.typedb.studio.view.concept.Concept.attributeValueString
 import com.vaticle.typedb.studio.view.material.BrowserGroup
 import com.vaticle.typedb.studio.view.material.Form
@@ -102,7 +102,7 @@ class ConceptPreview constructor(
         Row(verticalAlignment = Alignment.CenterVertically) {
             conceptIcon(type).let { Icon.Render(it.code, it.color()) }
             Form.ButtonSpacer()
-            Form.Text(ConceptSummaryText(type))
+            Form.Text(TypeDislayName(type))
         }
     }
 

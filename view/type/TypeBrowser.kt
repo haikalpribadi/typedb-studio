@@ -69,9 +69,9 @@ class TypeBrowser(isOpen: Boolean = false, order: Int) : BrowserGroup.Browser(is
             title = Label.TYPE_BROWSER,
             mode = Navigator.Mode.BROWSER,
             initExpandDepth = 1,
-            // TODO: contextMenuFn = { contextMenuItems(it) }
+            contextMenuFn = { contextMenuItems(it) }
         ) { GlobalState.resource.tryOpen(it.item) }
-        GlobalState.schema.onRootsUpdated = { navState.reloadEntries() }
+        GlobalState.schema.onTypesChange = { navState.reloadEntries() }
         buttons = listOf(refreshButton(navState), exportButton(navState)) + navState.buttons
         Navigator.Layout(
             state = navState,
@@ -108,10 +108,40 @@ class TypeBrowser(isOpen: Boolean = false, order: Int) : BrowserGroup.Browser(is
         }
     }
 
-    private fun contextMenuItems(
-        itemState: Navigator.ItemState<TypeState.Thing>, onChangeEntries: () -> Unit
-    ): List<List<ContextMenu.Item>> {
-        return listOf() // TODO
+    private fun contextMenuItems(itemState: Navigator.ItemState<TypeState.Thing>): List<List<ContextMenu.Item>> {
+        val type = itemState.item
+        return listOf(
+            listOf(
+                ContextMenu.Item(
+                    label = Label.OPEN,
+                    icon = Icon.Code.BLOCK_QUOTE
+                ) { GlobalState.resource.tryOpen(type) },
+            ),
+            listOf(
+                ContextMenu.Item(
+                    label = Label.RENAME,
+                    icon = Icon.Code.PEN,
+                ) { type.initiateRename() },
+                ContextMenu.Item(
+                    label = Label.CHANGE_SUPERTYPE,
+                    icon = Icon.Code.ARROW_UP_SMALL_BIG,
+                    enabled = !type.isRoot,
+                ) { type.initiateChangeSupertype() },
+            ),
+            listOf(
+                ContextMenu.Item(
+                    label = Label.DELETE,
+                    icon = Icon.Code.TRASH_CAN,
+                    enabled = !type.hasSubtypes,
+                ) {
+                    GlobalState.confirmation.submit(
+                        title = Label.CONFIRM_TYPE_DELETION,
+                        message = Sentence.CONFIRM_TYPE_DELETION,
+                        onConfirm = { type.delete(); itemState.navState.reloadEntries() }
+                    )
+                }
+            )
+        )
     }
 
     @Composable
