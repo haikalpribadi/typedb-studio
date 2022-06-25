@@ -121,7 +121,10 @@ object Navigator {
     private val LOGGER = KotlinLogging.logger {}
 
     class ItemState<T : Navigable<T>> internal constructor(
-        val item: T, internal val parent: ItemState<T>?, val navState: NavigatorState<T>
+        val item: T,
+        val parent: ItemState<T>?,
+        val navState: NavigatorState<T>,
+        val coroutineScope: CoroutineScope
     ) : Comparable<ItemState<T>> {
 
         var isExpanded: Boolean by mutableStateOf(false)
@@ -177,7 +180,9 @@ object Navigator {
         private fun expand(currentDepth: Int, maxDepth: Int) {
             isExpanded = true
             reloadEntries()
-            if (currentDepth < maxDepth) entries.forEach { it.expand(currentDepth + 1, maxDepth) }
+            if (currentDepth < maxDepth) entries.forEach {
+                coroutineScope.launch(IO) { it.expand(currentDepth + 1, maxDepth) }
+            }
         }
 
         internal fun updateButtonArea(rawRectangle: Rect) {
@@ -192,7 +197,7 @@ object Navigator {
                 val deleted = old - new
                 val added = new - old
                 val updatedEntries = entries.filter { !deleted.contains(it.item) } +
-                        added.map { ItemState(it, this, navState) }.toList()
+                        added.map { ItemState(it, this, navState, coroutineScope) }.toList()
                 entries = updatedEntries.sorted()
             }
             entries.filter { it.isExpanded }.forEach { it.reloadEntries() }
@@ -219,7 +224,7 @@ object Navigator {
         }
     }
 
-    class NavigatorState<T : Navigable<T>>(
+    class NavigatorState<T : Navigable<T>> constructor(
         container: Navigable<T>,
         private val title: String,
         internal val mode: Mode,
@@ -229,7 +234,7 @@ object Navigator {
         internal val contextMenuFn: ((item: ItemState<T>) -> List<List<ContextMenu.Item>>)? = null,
         private val openFn: (ItemState<T>) -> Unit
     ) {
-        private var container: ItemState<T> by mutableStateOf(ItemState(container as T, null, this))
+        private var container: ItemState<T> by mutableStateOf(ItemState(container as T, null, this, coroutineScope))
         internal var entries: List<ItemState<T>> by mutableStateOf(emptyList()); private set
         internal var density by mutableStateOf(0f)
         private var itemWidth by mutableStateOf(0.dp)
@@ -247,19 +252,15 @@ object Navigator {
             IconButtonArg(icon = Icon.Code.CHEVRONS_UP, tooltip = Tooltip.Arg(title = Label.COLLAPSE)) { collapse() }
         )
 
-        init {
-            initialiseContainer()
-        }
-
-        private fun initialiseContainer() = coroutineScope.launch {
+        fun launch() = coroutineScope.launch(IO) {
             container.expand(false, 1 + initExpandDepth)
             if (liveUpdate) launchWatcher(container)
             recomputeList()
         }
 
         fun replaceContainer(newContainer: Navigable<T>) {
-            container = ItemState(newContainer as T, null, this)
-            initialiseContainer()
+            container = ItemState(newContainer as T, null, this, coroutineScope)
+            launch()
         }
 
         @OptIn(ExperimentalTime::class)
