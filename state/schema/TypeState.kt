@@ -29,9 +29,11 @@ import com.vaticle.typedb.client.api.concept.type.ThingType
 import com.vaticle.typedb.client.api.concept.type.Type
 import com.vaticle.typedb.client.common.exception.TypeDBClientException
 import com.vaticle.typedb.studio.state.app.NotificationManager.Companion.launchAndHandle
+import com.vaticle.typedb.studio.state.common.util.Label
 import com.vaticle.typedb.studio.state.common.util.Message.Companion.UNKNOWN
 import com.vaticle.typedb.studio.state.common.util.Message.Schema.Companion.FAILED_TO_DELETE_TYPE
 import com.vaticle.typedb.studio.state.common.util.Message.Schema.Companion.FAILED_TO_LOAD_TYPE
+import com.vaticle.typedb.studio.state.common.util.Sentence
 import com.vaticle.typedb.studio.state.page.Navigable
 import com.vaticle.typedb.studio.state.page.Pageable
 import com.vaticle.typeql.lang.common.TypeQLToken
@@ -40,8 +42,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.streams.toList
 import mu.KotlinLogging
 
-sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
+sealed class TypeState private constructor(val encoding: Encoding, val schemaMgr: SchemaManager) {
 
+    enum class Encoding(val label: String) {
+        ENTITY_TYPE(Label.ENTITY),
+        RELATION_TYPE(Label.RELATION),
+        ATTRIBUTE_TYPE(Label.ATTRIBUTE),
+        ROLE_TYPE(Label.ROLE)
+    }
     data class AttributeTypeProperties(
         val attributeType: Attribute,
         val overriddenType: Attribute?,
@@ -129,11 +137,12 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
         return conceptType.hashCode()
     }
 
-    sealed class Thing constructor(
+    sealed class Thing(
         override val conceptType: ThingType,
+        encoding: Encoding,
         name: String,
         schemaMgr: SchemaManager
-    ) : TypeState(schemaMgr), Navigable<Thing>, Pageable {
+    ) : TypeState(encoding, schemaMgr), Navigable<Thing>, Pageable {
 
         private class Callbacks {
 
@@ -145,6 +154,9 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
                 onClose.clear()
             }
         }
+
+        val canBeDeleted get() = true // TODO
+        val canBeAbstract get() = true // TODO
 
         override val supertype: Thing? = null
         override val supertypes: List<Thing> = emptyList()
@@ -191,29 +203,6 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
         override fun activate() {
             schemaMgr.pages.active(this)
             loadProperties()
-        }
-
-        override fun close() {
-            if (isOpenAtomic.compareAndSet(true, false)) {
-                schemaMgr.pages.close(this)
-                schemaMgr.remove(this)
-                callbacks.onClose.forEach { it(this) }
-                callbacks.clear()
-            }
-        }
-
-        fun closeRecursive() {
-            close()
-            entries.forEach { it.closeRecursive() }
-        }
-
-        override fun delete() {
-            try {
-                close()
-                // TODO
-            } catch (e: Exception) {
-                schemaMgr.notificationMgr.userError(LOGGER, FAILED_TO_DELETE_TYPE, e.message ?: UNKNOWN)
-            }
         }
 
         override fun loadOtherProperties() {
@@ -285,6 +274,16 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
             playsRoleTypeProperties = properties
         }
 
+        abstract fun initiateCreateSubtype()
+        fun initiateRename() = schemaMgr.renameTypeDialog.open(this)
+        fun initiateEditSupertype() = schemaMgr.editSuperTypeDialog.open(this)
+
+        fun initiateEditAbstract() = schemaMgr.editAbstractDialog.open(this)
+
+        fun tryRename(newLabel: String) {
+            // TODO
+        }
+
         fun definePlaysRoleType(roleType: Role, overriddenType: Role?) {
             // TODO
         }
@@ -299,13 +298,44 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
                     conceptType.asRemote(tx).syntax?.let { onSuccess(it) }
                 }
             }
+
+        override fun close() {
+            if (isOpenAtomic.compareAndSet(true, false)) {
+                schemaMgr.pages.close(this)
+                schemaMgr.remove(this)
+                callbacks.onClose.forEach { it(this) }
+                callbacks.clear()
+            }
+        }
+
+        fun closeRecursive() {
+            close()
+            entries.forEach { it.closeRecursive() }
+        }
+
+        fun initiateDelete() {
+            schemaMgr.confirmation.submit(
+                title = Label.CONFIRM_TYPE_DELETION,
+                message = Sentence.CONFIRM_TYPE_DELETION.format(name),
+                onConfirm = { delete() }
+            )
+        }
+
+        override fun delete() {
+            try {
+                close()
+                // TODO
+            } catch (e: Exception) {
+                schemaMgr.notificationMgr.userError(LOGGER, FAILED_TO_DELETE_TYPE, e.message ?: UNKNOWN)
+            }
+        }
     }
 
     class Entity internal constructor(
         override val conceptType: EntityType,
         supertype: Entity?,
         schemaMgr: SchemaManager
-    ) : Thing(conceptType, conceptType.label.name(), schemaMgr) {
+    ) : Thing(conceptType, Encoding.ENTITY_TYPE, conceptType.label.name(), schemaMgr) {
 
         override val parent: Entity? get() = supertype
         override val baseType = TypeQLToken.Type.ENTITY
@@ -313,6 +343,8 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
         override var supertypes: List<Entity> by mutableStateOf(supertype?.let { listOf(it) } ?: listOf())
         override var subtypesExplicit: List<Entity> by mutableStateOf(listOf())
         override val subtypes: List<Entity> get() = subtypesExplicit.map { listOf(it) + it.subtypes }.flatten()
+
+        override fun initiateCreateSubtype() = schemaMgr.createEntityTypeDialog.open(this)
 
         override fun updateSubtypesExplicit(newSubtypes: List<TypeState>) {
             subtypesExplicit = newSubtypes.map { it as Entity }
@@ -339,7 +371,7 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
         override val conceptType: AttributeType,
         supertype: Attribute?,
         schemaMgr: SchemaManager
-    ) : Thing(conceptType, conceptType.label.name(), schemaMgr) {
+    ) : Thing(conceptType, Encoding.ATTRIBUTE_TYPE, conceptType.label.name(), schemaMgr) {
 
         override val info get() = valueType
         override val parent: Attribute? get() = supertype
@@ -353,6 +385,8 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
         val isKeyable: Boolean get() = conceptType.valueType.isKeyable
         var ownerTypeProperties: Map<ThingType, OwnerTypeProperties> by mutableStateOf(mapOf())
         val ownerTypes get() = ownerTypeProperties.values.map { it.ownerType }
+
+        override fun initiateCreateSubtype() = schemaMgr.createAttributeTypeDialog.open(this)
 
         override fun updateSubtypesExplicit(newSubtypes: List<TypeState>) {
             subtypesExplicit = newSubtypes.map { it as Attribute }
@@ -412,7 +446,7 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
         override val conceptType: RelationType,
         supertype: Relation?,
         schemaMgr: SchemaManager
-    ) : Thing(conceptType, conceptType.label.name(), schemaMgr) {
+    ) : Thing(conceptType, Encoding.RELATION_TYPE, conceptType.label.name(), schemaMgr) {
 
         override val parent: Relation? get() = supertype
         override val baseType = TypeQLToken.Type.RELATION
@@ -422,6 +456,8 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
         override val subtypes: List<Relation> get() = subtypesExplicit.map { listOf(it) + it.subtypes }.flatten()
         var relatesRoleTypeProperties: List<RoleTypeProperties> by mutableStateOf(emptyList())
         val relatesRoleTypes: List<Role> get() = relatesRoleTypeProperties.map { it.roleType }
+
+        override fun initiateCreateSubtype() = schemaMgr.createRelationTypeDialog.open(this)
 
         override fun updateSubtypesExplicit(newSubtypes: List<TypeState>) {
             subtypesExplicit = newSubtypes.map { it as Relation }
@@ -496,7 +532,7 @@ sealed class TypeState private constructor(val schemaMgr: SchemaManager) {
         val relationType: Relation,
         supertype: Role?,
         schemaMgr: SchemaManager
-    ) : TypeState(schemaMgr) {
+    ) : TypeState(Encoding.ROLE_TYPE, schemaMgr) {
 
         private val name: String by mutableStateOf(conceptType.label.name())
         val scopedName get() = relationType.name + ":" + name

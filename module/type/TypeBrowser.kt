@@ -71,7 +71,7 @@ class TypeBrowser(isOpen: Boolean = false, order: Int) : Browsers.Browser(isOpen
             mode = Navigator.Mode.BROWSER,
             initExpandDepth = 1,
             openFn = { it.item.tryOpen() },
-            // TODO: contextMenuFn = { contextMenuItems(it) }
+            contextMenuFn = { contextMenuItems(it) }
         ) { StudioState.schema.onTypesUpdated { it.reloadEntries() } }
         buttons = listOf(refreshButton(navState), exportButton(navState)) + navState.buttons
         Navigator.Layout(
@@ -106,10 +106,21 @@ class TypeBrowser(isOpen: Boolean = false, order: Int) : Browsers.Browser(isOpen
         }
     }
 
-    private fun contextMenuItems(
-        itemState: Navigator.ItemState<TypeState.Thing>, onChangeEntries: () -> Unit
-    ): List<List<ContextMenu.Item>> {
-        return listOf() // TODO
+    private fun contextMenuItems(itemState: Navigator.ItemState<TypeState.Thing>): List<List<ContextMenu.Item>> {
+        val typeState = itemState.item
+        return listOf(
+            listOf(
+                ContextMenu.Item(Label.OPEN, Icon.Code.BLOCK_QUOTE) { typeState.tryOpen() },
+            ),
+            listOf(
+                ContextMenu.Item(Label.CREATE_SUBTYPE, Icon.Code.SQUARE_PLUS) { typeState.initiateCreateSubtype() }
+            ),
+            listOf(
+                ContextMenu.Item(Label.DELETE, Icon.Code.TRASH_CAN, enabled = typeState.canBeDeleted) {
+                    typeState.initiateDelete()
+                }
+            )
+        )
     }
 
     @Composable

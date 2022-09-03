@@ -37,6 +37,7 @@ import com.vaticle.typedb.studio.framework.material.Form
 import com.vaticle.typedb.studio.framework.material.Form.Field
 import com.vaticle.typedb.studio.framework.material.Form.FormRowSpacer
 import com.vaticle.typedb.studio.framework.material.Form.Submission
+import com.vaticle.typedb.studio.framework.material.Form.Text
 import com.vaticle.typedb.studio.framework.material.Form.TextInput
 import com.vaticle.typedb.studio.framework.material.Icon
 import com.vaticle.typedb.studio.framework.material.Tooltip
@@ -69,13 +70,8 @@ object ProjectDialog {
 
         var field: String by mutableStateOf(initField)
 
-        override fun cancel() {
-            onCancel()
-        }
-
-        override fun isValid(): Boolean {
-            return field.isNotBlank() && isValid?.invoke(field) ?: true
-        }
+        override fun cancel() = onCancel()
+        override fun isValid(): Boolean = field.isNotBlank() && isValid?.invoke(field) ?: true
 
         override fun trySubmit() {
             assert(field.isNotBlank())
@@ -138,7 +134,7 @@ object ProjectDialog {
     ) {
         Dialog.Layout(dialogState, title, DIALOG_WIDTH, DIALOG_HEIGHT) {
             Submission(state = formState, modifier = Modifier.fillMaxSize(), submitLabel = submitLabel) {
-                Form.Text(value = message, softWrap = true)
+                Text(value = message, softWrap = true)
                 SelectDirectoryField(formState, window, title)
             }
         }
@@ -275,11 +271,12 @@ object ProjectDialog {
 
     @Composable
     private fun PathNamingDialog(
-        dialogState: DialogManager, formState: PathForm, title: String, message: String, submitLabel: String
+        dialogState: DialogManager, formState: PathForm,
+        title: String, message: String, submitLabel: String
     ) {
         Dialog.Layout(dialogState, title, DIALOG_WIDTH, DIALOG_HEIGHT) {
             Submission(state = formState, modifier = Modifier.fillMaxSize(), submitLabel = submitLabel) {
-                Form.Text(value = message, softWrap = true)
+                Text(value = message, softWrap = true)
                 PathNamingField(formState.field) { formState.field = it }
             }
         }

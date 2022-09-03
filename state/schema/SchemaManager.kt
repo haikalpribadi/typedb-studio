@@ -28,9 +28,12 @@ import com.vaticle.typedb.client.api.concept.type.RelationType
 import com.vaticle.typedb.client.api.concept.type.RoleType
 import com.vaticle.typedb.client.api.concept.type.ThingType
 import com.vaticle.typedb.client.api.concept.type.Type
+import com.vaticle.typedb.studio.state.app.ConfirmationManager
+import com.vaticle.typedb.studio.state.app.DialogManager
 import com.vaticle.typedb.studio.state.app.NotificationManager
 import com.vaticle.typedb.studio.state.app.NotificationManager.Companion.launchAndHandle
 import com.vaticle.typedb.studio.state.common.atomic.AtomicBooleanState
+import com.vaticle.typedb.studio.state.common.util.Message
 import com.vaticle.typedb.studio.state.connection.SessionState
 import com.vaticle.typedb.studio.state.page.Navigable
 import com.vaticle.typedb.studio.state.page.PageManager
@@ -47,11 +50,27 @@ import kotlinx.coroutines.delay
 import mu.KotlinLogging
 
 @OptIn(ExperimentalTime::class)
-class SchemaManager(
+class SchemaManager constructor(
     private val session: SessionState,
     internal val pages: PageManager,
-    internal val notificationMgr: NotificationManager
+    internal val notificationMgr: NotificationManager,
+    internal val confirmation: ConfirmationManager
 ) : Navigable<TypeState.Thing> {
+
+    class ModifyTypeDialog : DialogManager() {
+
+        var typeState: TypeState.Thing? by mutableStateOf(null); private set
+
+        internal fun open(typeState: TypeState.Thing) {
+            isOpen = true
+            this.typeState = typeState
+        }
+
+        override fun close() {
+            isOpen = false
+            typeState = null
+        }
+    }
 
     override val name: String = TypeQLToken.Type.THING.name.lowercase()
     override val parent: TypeState.Thing? = null
@@ -66,6 +85,12 @@ class SchemaManager(
     var rootRelationType: TypeState.Relation? by mutableStateOf(null); private set
     var rootAttributeType: TypeState.Attribute? by mutableStateOf(null); private set
     val isWritable: Boolean get() = session.isSchema && session.transaction.isWrite
+    val createEntityTypeDialog = ModifyTypeDialog()
+    val createRelationTypeDialog = ModifyTypeDialog()
+    val createAttributeTypeDialog = ModifyTypeDialog()
+    val renameTypeDialog = ModifyTypeDialog()
+    val editSuperTypeDialog = ModifyTypeDialog()
+    val editAbstractDialog = ModifyTypeDialog()
     private var writeTx: AtomicReference<TypeDBTransaction?> = AtomicReference()
     private var readTx: AtomicReference<TypeDBTransaction?> = AtomicReference()
     private val lastTransactionUse = AtomicLong(0)
@@ -102,6 +127,35 @@ class SchemaManager(
 
     override fun compareTo(other: Navigable<TypeState.Thing>): Int {
         return if (other is SchemaManager) 0 else -1
+    }
+
+    fun tryCreateEntityType(newLabel: String, supertypeState: TypeState.Thing) {
+        tryCreateThingType(newLabel, supertypeState) { tx -> tx.concepts().putEntityType(newLabel) }
+    }
+
+    fun tryCreateRelationType(newLabel: String, supertypeState: TypeState.Thing) {
+        tryCreateThingType(newLabel, supertypeState) { tx -> tx.concepts().putRelationType(newLabel) }
+    }
+
+    fun tryCreateAttributeType(newLabel: String, valueType: AttributeType.ValueType, supertypeState: TypeState.Thing) {
+        tryCreateThingType(newLabel, supertypeState) { tx -> tx.concepts().putAttributeType(newLabel, valueType) }
+    }
+
+    private fun tryCreateThingType(
+        newLabel: String, supertypeState: TypeState.Thing, creatorFn: (TypeDBTransaction) -> ThingType
+    ) {
+        if (openOrGetReadTx()?.concepts()?.getThingType(newLabel) != null) notificationMgr.userError(
+            logger = LOGGER,
+            message = Message.Schema.FAILED_TO_CREATE_TYPE_DUE_TO_DUPLICATE,
+            supertypeState.encoding.label,
+            newLabel
+        ) else openOrGetWriteTx()?.let { tx ->
+            try {
+                val type = creatorFn(tx)
+            } catch (e: Exception) {
+                notificationMgr.userError(LOGGER, Message.Schema.FAILED_TO_CREATE_TYPE, e.message ?: Message.UNKNOWN)
+            }
+        }
     }
 
     internal fun createTypeState(type: Type): TypeState? = when (type) {

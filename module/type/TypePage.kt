@@ -94,9 +94,6 @@ sealed class TypePage(
     private val verScroller = ScrollState(0)
     private var width: Dp by mutableStateOf(0.dp)
     private var showAdvanced by mutableStateOf(showAdvanced)
-    private var showEditLabelDialog by mutableStateOf(false)
-    private var showEditSupertypeDialog by mutableStateOf(false)
-    private var showEditAbstractDialog by mutableStateOf(false)
     private val subtypesNavState = Navigator.NavigatorState(
         container = type,
         title = Label.SUBTYPES_OF + " " + type.name,
@@ -143,25 +140,7 @@ sealed class TypePage(
             Scrollbar.Vertical(rememberScrollbarAdapter(verScroller), Modifier.align(Alignment.CenterEnd))
             Scrollbar.Horizontal(rememberScrollbarAdapter(horScroller), Modifier.align(Alignment.BottomCenter))
         }
-        if (showEditLabelDialog) EditLabelDialog()
-        if (showEditSupertypeDialog) EditSupertypeDialog()
-        if (showEditAbstractDialog) EditAbstractDialog()
         LaunchedEffect(focusReq) { focusReq.requestFocus() }
-    }
-
-    @Composable
-    private fun EditLabelDialog() {
-
-    }
-
-    @Composable
-    private fun EditSupertypeDialog() {
-
-    }
-
-    @Composable
-    private fun EditAbstractDialog() {
-
     }
 
     @Composable
@@ -228,7 +207,7 @@ sealed class TypePage(
     private fun LabelSection() {
         SectionRow {
             Form.TextBox(text = ConceptSummaryText(type.conceptType), leadingIcon = conceptIcon(type.conceptType))
-            EditButton { } // TODO
+            EditButton { type.initiateRename() }
             Spacer(Modifier.weight(1f))
         }
     }
@@ -244,7 +223,7 @@ sealed class TypePage(
                 leadingIcon = conceptIcon(supertype.conceptType),
                 enabled = !type.isRoot,
             ) { supertype.tryOpen() }
-            EditButton { } // TODO
+            EditButton { type.initiateEditSupertype() }
         }
     }
 
@@ -254,7 +233,7 @@ sealed class TypePage(
             Form.Text(value = Label.ABSTRACT)
             Spacer(Modifier.weight(1f))
             Form.TextBox(((if (type.isAbstract) "" else Label.NOT + " ") + Label.ABSTRACT).lowercase())
-            EditButton { } // TODO
+            EditButton { type.initiateEditAbstract() }
         }
     }
 
@@ -479,7 +458,7 @@ sealed class TypePage(
             leadingIcon = Form.IconArg(Icon.Code.TRASH_CAN) { Theme.studio.errorStroke },
             enabled = isEditable,
             tooltip = Tooltip.Arg(Label.DELETE, Sentence.EDITING_TYPES_REQUIREMENT_DESCRIPTION)
-        ) { } // TODO
+        ) { type.initiateDelete() }
     }
 
     @Composable

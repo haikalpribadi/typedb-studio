@@ -339,7 +339,7 @@ class FileState internal constructor(
     override fun initiateDelete(onSuccess: () -> Unit) {
         projectMgr.confirmation.submit(
             title = Label.CONFIRM_FILE_DELETION,
-            message = Sentence.CONFIRM_FILE_DELETION,
+            message = Sentence.CONFIRM_FILE_DELETION.format(name),
             onConfirm = { delete(); onSuccess() }
         )
     }
